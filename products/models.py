@@ -14,6 +14,10 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def cover_product(self):
+        return self.products.filter(available=True).first()
+
 
 class Product(models.Model):
     GARMENT_TYPES = [
@@ -57,3 +61,7 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def size_list(self):
+        return self.sizes.replace(',', ' ').split()

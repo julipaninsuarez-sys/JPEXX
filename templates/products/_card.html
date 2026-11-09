@@ -1,0 +1,22 @@
+<article class="jpx-card h-100">
+    <div class="jpx-stage">
+        {% if product.main_image %}
+        <img src="{{ product.main_image.url }}" alt="{{ product.name }}" loading="lazy" decoding="async">
+        {% else %}
+        <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
+        {% endif %}
+        <span class="jpx-card__tag">{{ product.category.name }}</span>
+    </div>
+    <div class="jpx-card__body">
+        <h3 class="jpx-card__name">
+            <a class="stretched-link" href="{% url 'products:detail' product.slug %}">{{ product.name }}</a>
+        </h3>
+        <div class="jpx-card__meta">
+            <span class="jpx-card__price">${{ product.price|floatformat:"-2" }}</span>
+            {% if product.size_list %}
+            <span class="jpx-card__sizes">{{ product.size_list|join:" · " }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="jpx-card__cta" aria-hidden="true">Ver detalles <span>&rarr;</span></div>
+</article>

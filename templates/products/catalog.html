@@ -3,71 +3,38 @@
 {% block title %}JPEX Store — Catálogo{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <!-- Encabezado del catálogo -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 fw-bold mb-1">
-                {% if current_category %}
-                    Categoría: {{ current_category.name }}
-                {% else %}
-                    Catálogo Completo
-                {% endif %}
-            </h1>
-            <p class="text-muted small mb-0">Indumentaria masculina disponible</p>
-        </div>
+<!-- Encabezado del catálogo -->
+<header class="jpx-pagehead jpx-halftone">
+    <div class="container">
+        <span class="jpx-eyebrow">{% if current_category %}Categoría{% else %}Colección Masculina{% endif %}</span>
+        <h1 class="jpx-pagehead__title">
+            {% if current_category %}{{ current_category.name }}{% else %}Catálogo Completo{% endif %}
+        </h1>
+        <p class="jpx-pagehead__sub">{{ products|length }} prenda{{ products|length|pluralize }} disponible{{ products|length|pluralize }}</p>
     </div>
+</header>
 
-    <div class="row">
-        <!-- Columna izquierda: Filtro por categorías -->
-        <div class="col-12 col-md-3 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h2 class="h6 fw-bold text-uppercase mb-3">Categorías</h2>
-                    <div class="list-group list-group-flush">
-                        <a href="{% url 'products:catalog' %}" 
-                           class="list-group-item list-group-item-action border-0 px-2 rounded {% if not current_category %}fw-bold bg-dark text-white{% endif %}">
-                            Todas las prendas
-                        </a>
-                        {% for category in categories %}
-                        <a href="{% url 'products:catalog_by_category' category.slug %}" 
-                           class="list-group-item list-group-item-action border-0 px-2 rounded {% if current_category.id == category.id %}fw-bold bg-dark text-white{% endif %}">
-                            {{ category.name }}
-                        </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="container pt-4">
+    <!-- Filtro por categorías -->
+    <nav class="jpx-filters" aria-label="Filtrar por categoría">
+        <a href="{% url 'products:catalog' %}" class="jpx-pill {% if not current_category %}is-active{% endif %}">Todas las prendas</a>
+        {% for category in categories %}
+        <a href="{% url 'products:catalog_by_category' category.slug %}" class="jpx-pill {% if current_category.id == category.id %}is-active{% endif %}">{{ category.name }}</a>
+        {% endfor %}
+    </nav>
 
-        <!-- Columna derecha: Grilla de productos -->
-        <div class="col-12 col-md-9">
-            <div class="row g-4">
-                {% for product in products %}
-                <div class="col-12 col-sm-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        {% if product.main_image %}
-                        <img src="{{ product.main_image.url }}" class="card-img-top product-card-img" alt="{{ product.name }}">
-                        {% endif %}
-                        <div class="card-body d-flex flex-column">
-                            <span class="text-uppercase text-muted small mb-1">{{ product.category.name }}</span>
-                            <h3 class="h6 fw-bold text-dark mb-2">{{ product.name }}</h3>
-                            <p class="fw-bold fs-5 mb-3">${{ product.price }}</p>
-                            <a href="{% url 'products:detail' product.slug %}" class="btn btn-outline-dark btn-sm mt-auto w-100">
-                                Ver detalles
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="col-12">
-                    <div class="alert alert-light border text-center py-5">
-                        <p class="text-muted mb-0">No hay prendas disponibles en esta categoría por el momento.</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+    <!-- Grilla de productos -->
+    <h2 class="visually-hidden">Prendas</h2>
+    <div class="row g-3 g-md-4">
+        {% for product in products %}
+        <div class="col-6 col-md-4 col-xl-3 reveal">
+            {% include 'products/_card.html' %}
         </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="jpx-empty">No hay prendas disponibles en esta categoría por el momento.</div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
