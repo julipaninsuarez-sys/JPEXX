@@ -1,46 +1,39 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}JPEX Store — Indumentaria Masculina{% endblock %}</title>
+    <script>document.documentElement.classList.add('js');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            color: #212529;
-        }
-        .brand-logo {
-            letter-spacing: 3px;
-            font-weight: 800;
-        }
-        .product-card-img {
-            height: 340px;
-            object-fit: cover;
-        }
-    </style>
+    <link href="{% static 'css/jpex.css' %}" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-3">
+    {% with url_name=request.resolver_match.url_name %}
+    <nav class="navbar navbar-expand-lg jpx-nav sticky-top py-3" data-bs-theme="dark">
         <div class="container">
-            <a class="navbar-brand brand-logo fs-4" href="{% url 'products:home' %}">JPEX</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <a class="navbar-brand jpx-logo" href="{% url 'products:home' %}">JPEX<span>.</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto gap-lg-3">
                     <li class="nav-item">
-                        <a class="nav-link fw-medium" href="{% url 'products:home' %}">Inicio</a>
+                        <a class="nav-link {% if url_name == 'home' %}active{% endif %}" {% if url_name == 'home' %}aria-current="page"{% endif %} href="{% url 'products:home' %}">Inicio</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link fw-medium" href="{% url 'products:catalog' %}">Catálogo</a>
+                        <a class="nav-link {% if url_name == 'catalog' or url_name == 'catalog_by_category' %}active{% endif %}" {% if url_name == 'catalog' %}aria-current="page"{% endif %} href="{% url 'products:catalog' %}">Catálogo</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
+    {% endwith %}
 
     <!-- Contenido dinámico de cada página -->
     <main class="flex-grow-1">
@@ -49,13 +42,37 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container text-center">
-            <p class="mb-1 fw-bold brand-logo">JPEX STORE</p>
-            <p class="text-secondary small mb-0">Indumentaria Masculina &mdash; Todos los derechos reservados.</p>
+    <footer class="jpx-footer jpx-halftone mt-5">
+        <div class="container">
+            <div class="jpx-footer__mark" aria-hidden="true">JPEX</div>
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+                <p class="jpx-footer__legal">JPEX STORE &mdash; Indumentaria Masculina &mdash; Todos los derechos reservados.</p>
+                <div class="jpx-footer__links d-flex gap-4">
+                    <a href="{% url 'products:home' %}">Inicio</a>
+                    <a href="{% url 'products:catalog' %}">Catálogo</a>
+                </div>
+            </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            var items = document.querySelectorAll('.reveal');
+            if (!('IntersectionObserver' in window)) {
+                items.forEach(function (el) { el.classList.add('is-in'); });
+                return;
+            }
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-in');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { rootMargin: '0px 0px -6% 0px' });
+            items.forEach(function (el) { observer.observe(el); });
+        })();
+    </script>
 </body>
 </html>

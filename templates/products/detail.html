@@ -3,56 +3,83 @@
 {% block title %}JPEX Store — {{ product.name }}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="container py-4 py-md-5">
+    <nav class="jpx-crumbs" aria-label="Ubicación">
+        <a href="{% url 'products:catalog' %}">Catálogo</a>
+        <span aria-hidden="true">/</span>
+        <a href="{% url 'products:catalog_by_category' product.category.slug %}">{{ product.category.name }}</a>
+    </nav>
+
     <div class="row g-5 align-items-start">
         <!-- Columna izquierda: Imagen de la prenda -->
         <div class="col-12 col-md-6">
-            {% if product.main_image %}
-            <div class="bg-white p-2 border shadow-sm">
-                <img src="{{ product.main_image.url }}" class="img-fluid w-100" style="object-fit: cover; max-height: 550px;" alt="{{ product.name }}">
+            <div class="jpx-detail-sticky">
+                <div class="jpx-detail-photo me-2">
+                    <div class="jpx-stage">
+                        {% if product.main_image %}
+                        <img src="{{ product.main_image.url }}" alt="{{ product.name }}">
+                        {% else %}
+                        <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            {% endif %}
         </div>
 
         <!-- Columna derecha: Información del producto y WhatsApp -->
         <div class="col-12 col-md-6">
-            <span class="text-uppercase text-muted small fw-semibold" style="letter-spacing: 2px;">
-                {{ product.category.name }} &bull; {{ product.color }}
-            </span>
-            <h1 class="h2 fw-bold text-dark mt-2 mb-3">{{ product.name }}</h1>
-            <p class="fs-3 fw-bold text-dark mb-4">${{ product.price }}</p>
+            <span class="jpx-detail-eyebrow">{{ product.category.name }} &bull; {{ product.color }}</span>
+            <h1 class="jpx-detail-name">{{ product.name }}</h1>
+            <p class="jpx-detail-price">${{ product.price|floatformat:"-2" }}</p>
 
             <!-- Descripción -->
             <div class="mb-4">
-                <h2 class="h6 fw-bold text-uppercase" style="letter-spacing: 1px;">Descripción</h2>
-                <p class="text-muted" style="line-height: 1.7;">
+                <h2 class="jpx-detail-label">Descripción</h2>
+                <p class="jpx-detail-text mb-0">
                     {{ product.description|default:"Prenda confeccionada con materiales de alta calidad, diseño moderno y calce cómodo para uso diario." }}
                 </p>
             </div>
 
             <!-- Talles disponibles -->
-            {% if product.sizes %}
+            {% if product.size_list %}
             <div class="mb-4">
-                <h2 class="h6 fw-bold text-uppercase mb-2" style="letter-spacing: 1px;">Talles Disponibles</h2>
-                <div class="d-flex gap-2">
-                    {% for size in product.sizes.split %}
-                    <span class="border px-3 py-1 bg-white text-dark small fw-medium">{{ size }}</span>
+                <h2 class="jpx-detail-label">Talles Disponibles</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for size in product.size_list %}
+                    <span class="jpx-size">{{ size }}</span>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
 
             <!-- Botón de consulta por WhatsApp -->
-            <div class="d-grid mt-4">
-                <a href="https://wa.me/549999999999?text=Hola!%20Quiero%20consultar%20por%20el%20producto:%20{{ product.name }}" 
-                   target="_blank" 
-                   class="btn btn-dark btn-lg py-3 rounded-0 text-uppercase fw-semibold" 
-                   style="letter-spacing: 2px;">
+            <div class="d-grid mt-4 pe-2">
+                <a href="https://wa.me/549999999999?text=Hola!%20Quiero%20consultar%20por%20el%20producto:%20{{ product.name|urlencode }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="jpx-btn">
                     Consultar por WhatsApp
                 </a>
-                <span class="text-muted small text-center mt-2">Serás atendido por un asesor de ventas de JPEX.</span>
+                <span class="jpx-detail-note">Serás atendido por un asesor de ventas de JPEX.</span>
             </div>
         </div>
     </div>
 </div>
+
+{% if related_products %}
+<!-- Más prendas de la misma categoría -->
+<section class="container mt-4 mb-5">
+    <div class="jpx-section-head">
+        <h2 class="jpx-section-title">También te puede gustar</h2>
+        <a href="{% url 'products:catalog_by_category' product.category.slug %}" class="jpx-link">Ver más {{ product.category.name }} <span>&rarr;</span></a>
+    </div>
+    <div class="row g-3 g-md-4">
+        {% for product in related_products %}
+        <div class="col-6 col-lg-3 reveal">
+            {% include 'products/_card.html' %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}
