@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <span class="badge bg-dark text-white rounded-0 px-3 py-2 mb-2 text-uppercase" style="letter-spacing: 2px;">
+            Virtual Try-On + Fit AI
+        </span>
+        <h1 class="fw-bold text-uppercase mt-2" style="letter-spacing: 1px;">JPEX LAB</h1>
+        <p class="text-muted mx-auto" style="max-width: 620px;">
+            Probate nuestras prendas de forma virtual y descubrí cómo te va a quedar cada talle según tus medidas reales.
+        </p>
+    </div>
+
+    <div class="row g-5 align-items-start">
+        <div class="col-lg-6">
+            <div class="border border-dark p-4 bg-white">
+                <h5 class="fw-bold text-uppercase mb-4 border-bottom pb-2">1. Configurá tu prueba</h5>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted">Método de obtención de medidas</label>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-dark rounded-0 btn-sm py-2 fw-bold">
+                            Cargar altura y peso
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary rounded-0 btn-sm py-2" disabled title="Próximamente disponible">
+                            Sacar medidas por foto (Próximamente)
+                        </button>
+                    </div>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" id="labForm">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="productSelect" class="form-label fw-bold small text-uppercase">Prenda a probar</label>
+                        <select name="product_id" id="productSelect" class="form-select rounded-0 border-dark" required>
+                            {% for prod in products %}
+                                <option value="{{ prod.id }}"
+                                        data-img="{{ prod.resolved_image_url|default:'' }}"
+                                        data-name="{{ prod.name }}"
+                                        {% if selected_product and prod.id == selected_product.id %}selected{% endif %}>
+                                    {{ prod.name }} - ${{ prod.price }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-flex align-items-center p-2 mb-3 bg-light border" id="garmentPreviewBox" {% if not selected_garment_url %}style="display:none !important;"{% endif %}>
+                        <img src="{{ selected_garment_url|default:'' }}" id="garmentPreviewImg" alt="Prenda seleccionada" style="width: 72px; height: 72px; object-fit: contain; background: #fff;" class="me-3 border p-1">
+                        <div>
+                            <div class="fw-bold text-uppercase small" id="garmentPreviewName">{{ selected_product.name }}</div>
+                            <div class="text-muted small">Prenda seleccionada para el probador</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase">Tu Altura (cm)</label>
+                            <input type="number" name="height_cm" class="form-control rounded-0 border-dark"
+                                   placeholder="Ej: 178" min="140" max="220"
+                                   value="{{ session_result.height_cm|default:175 }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-uppercase">Tu Peso (kg)</label>
+                            <input type="number" name="weight_kg" class="form-control rounded-0 border-dark"
+                                   placeholder="Ej: 76" min="40" max="180"
+                                   value="{{ session_result.weight_kg|default:75 }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">¿Cómo te gusta que te quede?</label>
+                        <select name="preferred_fit" class="form-select rounded-0 border-dark">
+                            <option value="oversize" {% if session_result.preferred_fit == 'oversize' %}selected{% endif %}>
+                                Suelto / Oversize (Recomendado JPEX)
+                            </option>
+                            <option value="regular" {% if session_result.preferred_fit == 'regular' %}selected{% endif %}>
+                                Clásico / Regular
+                            </option>
+                            <option value="ajustado" {% if session_result.preferred_fit == 'ajustado' %}selected{% endif %}>
+                                Al cuerpo / Ajustado
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase">Subí tu foto de frente</label>
+                        <input type="file" name="user_image" class="form-control rounded-0 border-dark" accept="image/*" required>
+                        <div class="form-text small">
+                            Consejo: Usá una foto de frente, de la cintura hacia arriba y con buena luz.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" id="submitBtn">
+                        Generar Prueba en JPEX LAB
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="border border-dark p-4 bg-white h-100">
+                <h5 class="fw-bold text-uppercase mb-4 border-bottom pb-2">2. Resultado y Diagnóstico</h5>
+
+                {% if session_result %}
+                    <div class="bg-dark text-white p-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-uppercase small" style="letter-spacing: 1px;">Talle Ideal Calculado</span>
+                            <span class="badge bg-white text-dark rounded-0 fs-5 px-3 py-1">
+                                TALLE {{ session_result.recommended_size }}
+                            </span>
+                        </div>
+                        <p class="mb-0 small opacity-75">
+                            {{ session_result.fit_explanation }}
+                        </p>
+                    </div>
+
+                    {% if session_result.result_image %}
+                        <div class="text-center mb-4">
+                            <span class="badge bg-success rounded-0 mb-2">Prueba Virtual Generada con IA</span>
+                            <img src="{{ session_result.result_image.url }}" class="img-fluid border border-dark w-100" alt="Resultado JPEX LAB">
+                        </div>
+                    {% else %}
+                        {% if ai_error_detail %}
+                        <div class="alert alert-warning rounded-0 small mb-3">
+                            <strong>Aviso del servidor gratuito de IA:</strong><br>
+                            <code>{{ ai_error_detail }}</code>
+                        </div>
+                        {% endif %}
+                        <div class="row g-2 mb-4 text-center">
+                            <div class="col-6">
+                                <div class="small fw-bold text-uppercase mb-1">Tu Foto</div>
+                                <img src="{{ session_result.user_image.url }}" class="img-fluid border" style="max-height: 280px; object-fit: contain;" alt="Tu foto">
+                            </div>
+                            <div class="col-6">
+                                <div class="small fw-bold text-uppercase mb-1">Prenda Elegida</div>
+                                {% if selected_garment_url %}
+                                    <img src="{{ selected_garment_url }}" class="img-fluid border" style="max-height: 280px; object-fit: contain;" alt="{{ session_result.product.name }}">
+                                {% else %}
+                                    <div class="p-4 border text-muted small">Sin imagen en catálogo</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success rounded-0 w-100 py-3 fw-bold text-uppercase">
+                        Pedir {{ session_result.product.name }} en Talle {{ session_result.recommended_size }} por WhatsApp
+                    </a>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <p class="fw-bold text-uppercase mb-2">Todavía no generaste tu prueba</p>
+                        <p class="small mb-0">
+                            Completá tu altura, peso y subí tu foto en el panel izquierdo para ver cómo te queda la prenda y conocer tu talle exacto.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Actualiza la miniatura de la prenda en vivo cuando cambiás el selector
+    const productSelect = document.getElementById('productSelect');
+    const previewImg = document.getElementById('garmentPreviewImg');
+    const previewName = document.getElementById('garmentPreviewName');
+    const previewBox = document.getElementById('garmentPreviewBox');
+
+    productSelect?.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const imgUrl = selectedOption.getAttribute('data-img');
+        const prodName = selectedOption.getAttribute('data-name');
+
+        if (imgUrl) {
+            previewImg.src = imgUrl;
+            previewName.innerText = prodName;
+            previewBox.style.display = 'flex';
+        }
+    });
+
+    document.getElementById('labForm')?.addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerText = 'Generando prueba con IA (15 a 30 seg)...';
+    });
+</script>
+{% endblock %}
