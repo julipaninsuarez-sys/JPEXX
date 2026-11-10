@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="190" height="150" viewBox="0 0 190 150">
+    <defs>
+        <g id="jpex">
+            <path d="M12 0H34V48C34 59 27 64 17 64 7 64 0 59 0 47V40H13V47C13 51 14 52 17 52 20 52 21 51 21 47V12H12Z"/>
+            <path transform="translate(40)" fill-rule="evenodd" d="M0 0H22C34 0 40 8 40 20 40 33 33 40 22 40H13V64H0ZM13 12V28H20C25 28 27 25 27 20 27 15 25 12 20 12Z"/>
+            <path transform="translate(86)" d="M0 0H34V12H13V25H30V37H13V52H34V64H0Z"/>
+            <path transform="translate(126)" d="M0 0H14L20 19 26 0H40L28 31 41 64H27L20 43 13 64H-1L12 31Z"/>
+        </g>
+    </defs>
+    <use xlink:href="#jpex" href="#jpex" x="12" y="6" fill="#121013"/>
+    <g fill="none" stroke="#121013" stroke-width="2">
+        <use xlink:href="#jpex" href="#jpex" x="107" y="81"/>
+        <use xlink:href="#jpex" href="#jpex" x="-83" y="81"/>
+    </g>
+</svg>

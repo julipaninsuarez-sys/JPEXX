@@ -1,5 +1,7 @@
 from django.db import models
 
+from .cutouts import cutout_url
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nombre")
@@ -61,6 +63,10 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def stage_image_url(self):
+        return cutout_url(self.main_image)
 
     @property
     def size_list(self):

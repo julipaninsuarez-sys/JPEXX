@@ -1,10 +1,18 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}JPEX Store — Inicio{% endblock %}
 
 {% block content %}
 <!-- Sección Principal (Hero) -->
 <section class="jpx-hero jpx-halftone">
+    <!-- data-interval: cada cuánto cambia. data-fade: cuánto dura el fundido. En milisegundos. -->
+    <div class="jpx-hero__slides" data-interval="8000" data-fade="2000" aria-hidden="true">
+        <img class="jpx-hero__slide is-active" src="{% static 'img/hero/carne-viva.webp' %}" alt="" fetchpriority="high">
+        <img class="jpx-hero__slide" data-src="{% static 'img/hero/lo-que-mira.webp' %}" alt="">
+        <img class="jpx-hero__slide" data-src="{% static 'img/hero/la-fosa.webp' %}" alt="">
+        <img class="jpx-hero__slide" data-src="{% static 'img/hero/grabado.webp' %}" alt="">
+    </div>
     <div class="container py-5">
         <div class="row align-items-center g-5 py-lg-4">
             <div class="col-12 col-lg-6">
@@ -17,12 +25,11 @@
             </div>
             <div class="col-12 col-lg-6">
                 <div class="jpx-fan">
-                    <div class="jpx-burst" aria-hidden="true"></div>
                     {% for product in hero_products %}
                     <a class="jpx-fan-card" href="{% url 'products:detail' product.slug %}">
                         <div class="jpx-stage">
                             {% if product.main_image %}
-                            <img src="{{ product.main_image.url }}" alt="{{ product.name }}">
+                            <img src="{{ product.stage_image_url }}" alt="{{ product.name }}">
                             {% endif %}
                         </div>
                         <div class="jpx-fan-card__label">
@@ -96,4 +103,5 @@
         {% endfor %}
     </div>
 </section>
+<script src="{% static 'js/hero-slides.js' %}" defer></script>
 {% endblock %}

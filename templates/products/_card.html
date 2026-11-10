@@ -1,7 +1,7 @@
 <article class="jpx-card h-100">
     <div class="jpx-stage">
         {% if product.main_image %}
-        <img src="{{ product.main_image.url }}" alt="{{ product.name }}" loading="lazy" decoding="async">
+        <img src="{{ product.stage_image_url }}" alt="{{ product.name }}" loading="lazy" decoding="async">
         {% else %}
         <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
         {% endif %}

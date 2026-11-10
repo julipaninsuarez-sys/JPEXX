@@ -142,7 +142,42 @@ button:focus-visible {
 .jpx-hero {
     position: relative;
     overflow: hidden;
+    isolation: isolate;
     color: #fff;
+}
+.jpx-hero__slides {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+}
+.jpx-hero__slides::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: linear-gradient(90deg, rgba(10, 8, 12, .9) 0, rgba(10, 8, 12, .82) 34%, rgba(10, 8, 12, 0) 60%);
+}
+.jpx-hero__slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+}
+.jpx-hero__slide.is-active {
+    z-index: 1;
+    opacity: 1;
+}
+.jpx-hero__slide.is-entering {
+    z-index: 2;
+    opacity: 1;
+    transition: opacity var(--hero-fade, 2s) ease-in-out;
+}
+@media (max-width: 991.98px) {
+    .jpx-hero__slides::after {
+        background: linear-gradient(180deg, rgba(10, 8, 12, .88) 0, rgba(10, 8, 12, .76) 48%, rgba(10, 8, 12, .1) 100%);
+    }
 }
 .jpx-hero__title {
     font-family: var(--font-display);
@@ -173,13 +208,6 @@ button:focus-visible {
     max-width: 560px;
     aspect-ratio: 1 / .92;
     margin-inline: auto;
-}
-.jpx-burst {
-    position: absolute;
-    inset: 2% 6%;
-    border-radius: 50%;
-    background: repeating-conic-gradient(var(--accent) 0 9deg, var(--accent-deep) 9deg 18deg);
-    animation: jpx-spin 70s linear infinite;
 }
 .jpx-fan-card {
     --r: 0deg;
@@ -221,7 +249,6 @@ button:focus-visible {
     text-overflow: ellipsis;
 }
 
-@keyframes jpx-spin { to { transform: rotate(360deg); } }
 @keyframes jpx-deal {
     from { opacity: 0; transform: translateY(90px) rotate(0deg); }
 }
@@ -381,12 +408,19 @@ button:focus-visible {
     isolation: isolate;
     background: var(--stage);
 }
+.jpx-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url('../img/jpex-empapelado.svg') 0 0 / 118px auto repeat;
+    opacity: .36;
+}
 .jpx-stage img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    mix-blend-mode: multiply;
 }
 .jpx-stage__noimg {
     position: absolute;
