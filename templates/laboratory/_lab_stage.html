@@ -1,0 +1,12 @@
+{% load static %}
+{# Fondo del Lab dentro del escenario de proporción fija. En celular va la versión original (1672). #}
+<picture>
+    <source media="(max-width: 767px)" srcset="{% static 'img/lab/fondo-lab-1672.webp' %}">
+    <img class="jpx-lab__bg"
+         src="{% static 'img/lab/fondo-lab-2560.webp' %}"
+         srcset="{% static 'img/lab/fondo-lab-1672.webp' %} 1672w,
+                 {% static 'img/lab/fondo-lab-2560.webp' %} 2560w,
+                 {% static 'img/lab/fondo-lab-3344.webp' %} 3344w"
+         sizes="(max-aspect-ratio: 16/9) 178vh, 100vw"
+         width="1672" height="941" alt="" fetchpriority="high">
+</picture>

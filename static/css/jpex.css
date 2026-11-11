@@ -733,3 +733,134 @@ button:focus-visible {
     }
     .js .reveal { opacity: 1; transform: none; }
 }
+
+
+/* ===== Lab ===== */
+/* La página ocupa justo la pantalla: barra de arriba + imagen, sin scroll. */
+.jpx-lab-page {
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+    background: #0a0709;
+}
+.jpx-lab-page main {
+    display: flex;
+    min-height: 0;
+}
+.jpx-lab {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    /* Permite medir el contenedor con cqw/cqh desde el escenario. */
+    container-type: size;
+}
+/* Escenario: siempre con la proporción de la ilustración (1672×941), centrado y
+ * cubriendo todo el contenedor (como "cover", recortando desde el centro).
+ * Todo lo que va encima se posiciona en porcentajes del escenario, así queda
+ * pegado a su lugar de la imagen en cualquier pantalla. */
+.jpx-lab__stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* Respaldo para navegadores sin unidades de contenedor. */
+    width: max(100vw, calc(100vh * 1672 / 941));
+    width: max(100cqw, calc(100cqh * 1672 / 941));
+    aspect-ratio: 1672 / 941;
+    transform: translate(-50%, -50%);
+}
+.jpx-lab__bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+/* Con mouse, el escenario arranca ampliado para tener margen al moverse (ver lab-pan.js). */
+.jpx-lab.is-live .jpx-lab__stage {
+    transform: translate(-50%, -50%) scale(1.1);
+    will-change: transform;
+}
+
+/* --- Lab: cartel de entrada, abajo a la izquierda. El centro del piso queda libre. --- */
+.jpx-lab__hud {
+    position: absolute;
+    left: clamp(1rem, 4vw, 3.5rem);
+    bottom: clamp(1.25rem, 6vh, 3.5rem);
+    z-index: 2;
+    max-width: min(24rem, calc(100% - 2rem));
+    padding: 1.25rem 1.5rem 1.5rem;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(10, 7, 9, .92), rgba(10, 7, 9, .74));
+    border-left: 3px solid var(--accent);
+}
+.jpx-lab.is-panel-open .jpx-lab__hud { display: none; }
+.jpx-lab__hud-kicker {
+    margin: 0 0 .25rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: .85rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--mustard);
+}
+.jpx-lab__hud-title,
+.jpx-lab-ui__title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+.jpx-lab__hud-title { margin: 0 0 .6rem; font-size: clamp(2.4rem, 5vw, 3.6rem); }
+.jpx-lab__hud-text { margin: 0 0 1.1rem; color: #d8d2c8; }
+
+/* --- Lab: el probador, encima del laboratorio. Tiene su propio scroll. --- */
+.jpx-lab-ui {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: #f1ece4;
+    background: rgba(8, 5, 7, .8);
+}
+.jpx-lab-ui[hidden] { display: none; }
+.jpx-lab-ui__title { font-size: clamp(2.4rem, 5vw, 3.4rem); }
+.jpx-lab-ui__close {
+    position: sticky;
+    top: .75rem;
+    z-index: 1;
+    display: block;
+    margin: .75rem 1rem 0 auto;
+    padding: .45rem .9rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(10, 7, 9, .92);
+    border: 1px solid rgba(255, 255, 255, .35);
+}
+.jpx-lab-ui__close:hover { border-color: var(--accent); color: var(--mustard); }
+.jpx-lab-card {
+    background: rgba(16, 11, 14, .94);
+    border: 1px solid rgba(212, 42, 20, .5);
+}
+.jpx-lab-card__sub {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .14);
+}
+.jpx-lab-badge {
+    background: var(--accent);
+    color: #fff;
+}
+.jpx-lab-btn {
+    color: #fff;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    letter-spacing: .08em;
+}
+.jpx-lab-btn:hover,
+.jpx-lab-btn:focus-visible { color: #fff; background: var(--accent-deep); border-color: var(--accent-deep); }
+.jpx-lab-btn:disabled { color: #fff; background: var(--accent-deep); border-color: var(--accent-deep); opacity: .8; }

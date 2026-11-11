@@ -92,5 +92,13 @@ def lab_view(request, product_id=None):
         'session_result': session_result,
         'whatsapp_url': whatsapp_url,
         'ai_error_detail': ai_error_detail,
+        # El probador se muestra abierto si se llega desde un producto o al enviar el
+        # formulario. En /lab/ a secas se ve primero el laboratorio.
+        'panel_open': bool(product_id) or request.method == 'POST',
     }
     return render(request, 'laboratory/lab.html', context)
+
+
+def lab_sketches(request):
+    """Página interna (fuera del menú) para probar variantes de las animaciones del fondo."""
+    return render(request, 'laboratory/lab_bocetos.html')
