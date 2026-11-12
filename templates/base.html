@@ -12,10 +12,109 @@
     <link href="{% static 'css/jpex.css' %}" rel="stylesheet">
 </head>
 <body class="d-flex flex-column min-vh-100">
+    <!-- Barra Superior de Anuncios JPEX -->
+    <div class="bg-dark text-white text-center py-2 px-3 small" style="letter-spacing: 1px; font-size: 0.78rem;">
+        <span class="fw-bold">🔥 15% OFF ABONANDO POR TRANSFERENCIA</span>
+        <span class="mx-2 d-none d-md-inline">|</span>
+        <span class="d-none d-md-inline">📦 ENVÍOS A TODO EL PAÍS</span>
+        <span class="mx-2">|</span>
+        <a href="{% url 'lab' %}" class="text-white text-decoration-underline fw-bold">
+            🧪 PROBATE LA ROPA CON IA EN JPEX LAB
+        </a>
+    </div>
 
     <!-- Navbar -->
     {% with url_name=request.resolver_match.url_name %}
     <nav class="navbar navbar-expand-lg jpx-nav sticky-top py-3" data-bs-theme="dark">
+        <!-- Buscador Predictivo en Vivo JPEX -->
+<div class="position-relative ms-lg-3 my-2 my-lg-0" style="min-width: 270px;">
+    <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white border-dark rounded-0">🔍</span>
+        <input type="text"
+               id="jpexLiveSearchInput"
+               class="form-control border-dark rounded-0"
+               placeholder="Buscar remera, buzo, banda..."
+               autocomplete="off">
+    </div>
+
+    <!-- Contenedor flotante donde aparecen los resultados en vivo -->
+    <div id="jpexLiveSearchResults"
+         class="position-absolute bg-white border border-dark w-100 shadow-lg d-none"
+         style="top: 100%; left: 0; z-index: 2000; max-height: 360px; overflow-y: auto;">
+    </div>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('jpexLiveSearchInput');
+    const resultsBox = document.getElementById('jpexLiveSearchResults');
+    let debounceTimer = null;
+
+    if (!searchInput || !resultsBox) return;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length < 2) {
+            resultsBox.classList.add('d-none');
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        // Esperamos 250ms después de la última tecla (Debounce)
+        debounceTimer = setTimeout(() => {
+            fetch(`{% url 'live_search_api' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsBox.innerHTML = '';
+
+                    if (!data.results || data.results.length === 0) {
+                        resultsBox.innerHTML = `
+                            <div class="p-3 text-muted small text-center">
+                                No encontramos prendas con "${query}"
+                            </div>`;
+                        resultsBox.classList.remove('d-none');
+                        return;
+                    }
+
+                    data.results.forEach(item => {
+                        const imgHtml = item.image_url
+                            ? `<img src="${item.image_url}" alt="${item.name}" style="width: 48px; height: 48px; object-fit: contain; background: #fff;" class="border me-3 p-1">`
+                            : `<div style="width: 48px; height: 48px;" class="border me-3 d-flex align-items-center justify-content-center small text-muted">—</div>`;
+
+                        const row = document.createElement('div');
+                        row.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+                        row.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                ${imgHtml}
+                                <div>
+                                    <div class="fw-bold small text-uppercase text-dark">${item.name}</div>
+                                    <div class="text-muted small">$${item.price}</div>
+                                </div>
+                            </div>
+                            <a href="${item.lab_url}" class="btn btn-dark btn-sm rounded-0 px-2 py-1" style="font-size: 0.72rem;">
+                                Probar IA
+                            </a>
+                        `;
+                        resultsBox.appendChild(row);
+                    });
+
+                    resultsBox.classList.remove('d-none');
+                })
+                .catch(err => console.error('Error en buscador:', err));
+        }, 250);
+    });
+
+    // Cerrar el desplegable al hacer clic afuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+            resultsBox.classList.add('d-none');
+        }
+    });
+})();
+</script>
+
         <div class="container">
             <a class="navbar-brand jpx-logo" href="{% url 'products:home' %}">JPEX<span>.</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú">

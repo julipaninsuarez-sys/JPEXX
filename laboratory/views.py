@@ -1,8 +1,38 @@
 from urllib.parse import quote
 from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
 from products.models import Product
 from .models import TryOnSession
 from .utils import calculate_size_and_prompt, get_product_image_info, generate_tryon_image
+
+
+def live_search_api(request):
+    """
+    ETAPA 1 - Buscador Predictivo en Vivo (AJAX / JSON API):
+    Recibe lo que el usuario escribe en la barra superior (?q=texto) y devuelve
+    hasta 6 prendas coincidentes en formato JSON sin recargar la página.
+    """
+    query = request.GET.get('q', '').strip()
+
+    # Si escribió menos de 2 letras, devolvemos una lista vacía para no sobrecargar la base de datos
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    # __icontains hace una búsqueda insensible a mayúsculas/minúsculas (SQL LIKE)
+    matched_products = Product.objects.filter(name__icontains=query)[:6]
+
+    results = []
+    for prod in matched_products:
+        _, img_url = get_product_image_info(prod)
+        results.append({
+            'id': prod.id,
+            'name': prod.name,
+            'price': str(getattr(prod, 'price', '')),
+            'image_url': img_url or '',
+            'lab_url': f"/lab/{prod.id}/",
+        })
+
+    return JsonResponse({'results': results})
 
 
 def lab_view(request, product_id=None):
@@ -14,7 +44,6 @@ def lab_view(request, product_id=None):
     """
     all_products = Product.objects.all()
 
-    # Armamos una lista con la URL de imagen ya resuelta para cada producto
     products_with_img = []
     for prod in all_products:
         _, img_url = get_product_image_info(prod)
@@ -25,7 +54,9 @@ def lab_view(request, product_id=None):
     if product_id:
         selected_product = get_object_or_404(Product, id=product_id)
     elif products_with_img:
-        selected_product = products_with_img[0]
+        # Priorizamos preseleccionar el primer producto que sí tenga imagen válida
+        products_valid = [p for p in products_with_img if p.resolved_image_url]
+        selected_product = products_valid[0] if products_valid else products_with_img[0]
 
     selected_garment_path, selected_garment_url = get_product_image_info(selected_product)
 
