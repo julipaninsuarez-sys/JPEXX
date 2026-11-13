@@ -1,6 +1,8 @@
 <article class="jpx-card h-100">
     <div class="jpx-stage">
-        {% if product.main_image %}
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy" decoding="async">
+        {% elif product.main_image %}
         <img src="{{ product.stage_image_url }}" alt="{{ product.name }}" loading="lazy" decoding="async">
         {% else %}
         <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
@@ -13,7 +15,11 @@
         </h3>
         <div class="jpx-card__meta">
             <span class="jpx-card__price">${{ product.price|floatformat:"-2" }}</span>
-            {% if product.size_list %}
+            {% if product.sizes.all %}
+            <span class="jpx-card__sizes">
+                {% for s in product.sizes.all %}{{ s.name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+            </span>
+            {% elif product.size_list %}
             <span class="jpx-card__sizes">{{ product.size_list|join:" · " }}</span>
             {% endif %}
         </div>

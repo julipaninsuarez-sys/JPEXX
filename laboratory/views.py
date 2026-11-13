@@ -3,7 +3,12 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from products.models import Product
 from .models import TryOnSession
-from .utils import calculate_size_and_prompt, get_product_image_info, generate_tryon_image
+from .utils import (
+    calculate_size_and_prompt,
+    get_product_image_info,
+    get_product_sizes_data,
+    generate_tryon_image,
+)
 
 
 def live_search_api(request):
@@ -14,11 +19,9 @@ def live_search_api(request):
     """
     query = request.GET.get('q', '').strip()
 
-    # Si escribió menos de 2 letras, devolvemos una lista vacía para no sobrecargar la base de datos
     if len(query) < 2:
         return JsonResponse({'results': []})
 
-    # __icontains hace una búsqueda insensible a mayúsculas/minúsculas (SQL LIKE)
     matched_products = Product.objects.filter(name__icontains=query)[:6]
 
     results = []
@@ -37,12 +40,13 @@ def live_search_api(request):
 
 def lab_view(request, product_id=None):
     """
-    Vista principal de JPEX LAB:
-    - Detecta la foto de cada producto automáticamente.
-    - Calcula el talle recomendado según altura, peso y calce preferido.
-    - Envía la foto del usuario + la foto de la prenda a Gradio (IDM-VTON).
+    Vista principal de JPEX LAB V2:
+    - Conecta con las fichas técnicas detalladas (ProductMeasurementDetail).
+    - Permite cálculo automático del talle ideal O prueba de un talle específico (S, M, L, XL).
+    - Genera una tabla comparativa de calce para todos los talles de esa prenda.
+    - Ejecuta el Router Multi-Motor de IA con preprocesamiento de estudio 768x1024.
     """
-    all_products = Product.objects.all()
+    all_products = Product.objects.prefetch_related('detailed_measurements__size', 'measurements').all()
 
     products_with_img = []
     for prod in all_products:
@@ -54,13 +58,20 @@ def lab_view(request, product_id=None):
     if product_id:
         selected_product = get_object_or_404(Product, id=product_id)
     elif products_with_img:
-        # Priorizamos preseleccionar el primer producto que sí tenga imagen válida
         products_valid = [p for p in products_with_img if p.resolved_image_url]
         selected_product = products_valid[0] if products_valid else products_with_img[0]
 
     selected_garment_path, selected_garment_url = get_product_image_info(selected_product)
 
+    # Obtenemos los talles configurados para la prenda seleccionada
+    product_sizes_data = get_product_sizes_data(selected_product) if selected_product else []
+    available_size_names = [item['size_name'] for item in product_sizes_data]
+
+    # Permite recibir ?size=L si viene desde la página de detalle del producto
+    requested_size = request.GET.get('size', 'auto')
+
     session_result = None
+    diagnostics = None
     whatsapp_url = None
     ai_error_detail = None
 
@@ -69,17 +80,22 @@ def lab_view(request, product_id=None):
         selected_product = get_object_or_404(Product, id=posted_product_id)
         selected_garment_path, selected_garment_url = get_product_image_info(selected_product)
 
+        product_sizes_data = get_product_sizes_data(selected_product)
+        available_size_names = [item['size_name'] for item in product_sizes_data]
+
         height_cm = int(request.POST.get('height_cm', 175))
         weight_kg = int(request.POST.get('weight_kg', 75))
         preferred_fit = request.POST.get('preferred_fit', 'oversize')
+        requested_size = request.POST.get('requested_size', 'auto')
         user_image = request.FILES.get('user_image')
 
         if user_image and selected_product:
-            rec_size, explanation, prompt = calculate_size_and_prompt(
+            rec_size, explanation, prompt, diagnostics = calculate_size_and_prompt(
                 product=selected_product,
                 height_cm=height_cm,
                 weight_kg=weight_kg,
-                preferred_fit=preferred_fit
+                preferred_fit=preferred_fit,
+                requested_size=requested_size
             )
 
             session_result = TryOnSession.objects.create(
@@ -110,17 +126,20 @@ def lab_view(request, product_id=None):
 
             mensaje_wsp = (
                 f"¡Hola JPEX! Probé la prenda *{selected_product.name}* en JPEX LAB. "
-                f"Mido {height_cm} cm, peso {weight_kg} kg y el sistema me recomendó el *Talle {rec_size}* "
+                f"Mido {height_cm} cm, peso {weight_kg} kg y probé el *Talle {rec_size}* "
                 f"(calce {preferred_fit}). ¿Tienen stock disponible?"
             )
-            numero_whatsapp = "5491100000000"
+            numero_whatsapp = "+5492213146934"
             whatsapp_url = f"https://wa.me/{numero_whatsapp}?text={quote(mensaje_wsp)}"
 
     context = {
         'products': products_with_img,
         'selected_product': selected_product,
         'selected_garment_url': selected_garment_url,
+        'available_size_names': available_size_names,
+        'requested_size': requested_size,
         'session_result': session_result,
+        'diagnostics': diagnostics,
         'whatsapp_url': whatsapp_url,
         'ai_error_detail': ai_error_detail,
     }

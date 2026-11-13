@@ -28,8 +28,21 @@
                     {% for product in hero_products %}
                     <a class="jpx-fan-card" href="{% url 'products:detail' product.slug %}">
                         <div class="jpx-stage">
-                            {% if product.main_image %}
-                            <img src="{{ product.stage_image_url }}" alt="{{ product.name }}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}"
+                                     alt="{{ product.name }}"
+                                     class="card-img-top rounded-0"
+                                     style="height: 320px; object-fit: contain; background-color: #f8f9fa; padding: 12px;">
+                            {% elif product.cutout_url %}
+                                <img src="{% static product.cutout_url %}"
+                                    alt="{{ product.name }}"
+                                    class="card-img-top rounded-0"
+                                    style="height: 320px; object-fit: contain; background-color: #f8f9fa; padding: 12px;">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center bg-light text-muted fw-bold"
+                                    style="height: 320px;">
+                                    SIN IMAGEN
+                                </div>
                             {% endif %}
                         </div>
                         <div class="jpx-fan-card__label">
