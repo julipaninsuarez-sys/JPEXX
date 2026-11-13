@@ -173,5 +173,194 @@
             items.forEach(function (el) { observer.observe(el); });
         })();
     </script>
+    <!-- PANEL LATERAL DEL CARRITO (OFFCANVAS) -->
+<div class="offcanvas offcanvas-end border-start border-dark" tabindex="-1" id="jpexCartDrawer" aria-labelledby="jpexCartDrawerLabel">
+    <div class="offcanvas-header bg-dark text-white rounded-0">
+        <h5 class="offcanvas-title fw-bold text-uppercase" id="jpexCartDrawerLabel" style="letter-spacing: 1px;">
+            🛒 Tu Pedido JPEX
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column justify-content-between p-3">
+        <!-- Lista de productos agregados -->
+        <div id="jpexCartItemsContainer" class="overflow-auto pe-1" style="max-height: 62vh;">
+            <div class="text-center text-muted py-5 small">
+                Tu carrito está vacío. Agregá prendas desde el catálogo o desde JPEX LAB.
+            </div>
+        </div>
+
+        <!-- Pie del carrito con Total y Botón de WhatsApp -->
+        <div class="border-top border-dark pt-3 mt-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-uppercase small">Total Estimado:</span>
+                <span id="jpexCartTotalAmount" class="fw-bold fs-4">$0</span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="#" id="jpexCartWhatsappBtn" target="_blank" rel="noopener"
+                   class="btn btn-success rounded-0 py-3 fw-bold text-uppercase">
+                    📲 Enviar Pedido por WhatsApp
+                </a>
+                <button type="button" id="jpexClearCartBtn"
+                        class="btn btn-outline-dark btn-sm rounded-0 text-uppercase fw-bold">
+                    Vaciar Carrito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LÓGICA GLOBAL DEL CARRITO JPEX -->
+<script>
+(function() {
+    // Cambiá este número por tu WhatsApp real con código de país (sin + ni espacios)
+    const JPEX_WHATSAPP_PHONE = "5491100000000";
+    const STORAGE_KEY = "jpex_cart_v1";
+
+    function getCart() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveCart(cart) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+        renderCart();
+    }
+
+    function formatPrice(num) {
+        return Number(num || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function addItem(item) {
+        const cart = getCart();
+        const sizeKey = (item.size || 'Único').trim();
+        const colorKey = (item.color || '').trim();
+        const uniqueKey = `${item.id}_${sizeKey}_${colorKey}`;
+
+        const existing = cart.find(i => i.key === uniqueKey);
+        if (existing) {
+            existing.qty += (item.qty || 1);
+        } else {
+            cart.push({
+                key: uniqueKey,
+                id: item.id,
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                size: sizeKey,
+                color: colorKey,
+                image: item.image || '',
+                qty: item.qty || 1
+            });
+        }
+        saveCart(cart);
+
+        // Abrir el carrito lateral automáticamente al agregar una prenda
+        const drawerEl = document.getElementById('jpexCartDrawer');
+        if (drawerEl && window.bootstrap) {
+            const instance = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+            instance.show();
+        }
+    }
+
+    function updateQty(key, delta) {
+        let cart = getCart();
+        const item = cart.find(i => i.key === key);
+        if (!item) return;
+        item.qty += delta;
+        if (item.qty <= 0) {
+            cart = cart.filter(i => i.key !== key);
+        }
+        saveCart(cart);
+    }
+
+    function clearCart() {
+        saveCart([]);
+    }
+
+    function renderCart() {
+        const cart = getCart();
+        const badge = document.getElementById('jpexCartCountBadge');
+        const container = document.getElementById('jpexCartItemsContainer');
+        const totalEl = document.getElementById('jpexCartTotalAmount');
+        const wspBtn = document.getElementById('jpexCartWhatsappBtn');
+
+        const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
+        const totalPrice = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+        if (badge) badge.innerText = totalQty;
+        if (totalEl) totalEl.innerText = `$${formatPrice(totalPrice)}`;
+
+        if (!container) return;
+
+        if (cart.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5 small">
+                    Tu carrito está vacío.<br>Agregá prendas desde el catálogo o desde JPEX LAB.
+                </div>`;
+            if (wspBtn) {
+                wspBtn.classList.add('disabled');
+                wspBtn.href = '#';
+            }
+            return;
+        }
+
+        container.innerHTML = cart.map(item => `
+            <div class="d-flex align-items-center justify-content-between border-bottom py-3">
+                <div class="d-flex align-items-center">
+                    ${item.image
+                        ? `<img src="${item.image}" alt="${item.name}" style="width:56px;height:56px;object-fit:contain;background:#fff;" class="border border-dark me-2 p-1">`
+                        : `<div style="width:56px;height:56px;" class="border me-2 bg-light d-flex align-items-center justify-content-center small fw-bold">JPEX</div>`
+                    }
+                    <div>
+                        <div class="fw-bold small text-uppercase">${item.name}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">
+                            Talle: <strong>${item.size}</strong>
+                            ${item.color ? ` | Color: <strong>${item.color}</strong>` : ''}
+                        </div>
+                        <div class="fw-bold small mt-1">$${formatPrice(item.price * item.qty)}</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 px-2 py-0"
+                            onclick="window.jpexCart.updateQty('${item.key}', -1)">-</button>
+                    <span class="px-2 small fw-bold">${item.qty}</span>
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 px-2 py-0"
+                            onclick="window.jpexCart.updateQty('${item.key}', 1)">+</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Armar el mensaje de WhatsApp con todas las prendas y el total
+        let lines = ["¡Hola JPEX! Quiero realizar el siguiente pedido:", ""];
+        cart.forEach(item => {
+            const colorTxt = item.color ? ` | Color: ${item.color}` : '';
+            lines.push(`• ${item.qty}x *${item.name}* (Talle: ${item.size}${colorTxt}) - $${formatPrice(item.price * item.qty)}`);
+        });
+        lines.push("");
+        lines.push(`*Total estimado: $${formatPrice(totalPrice)}*`);
+        lines.push("¿Tienen stock disponible para coordinar el pago y envío?");
+
+        if (wspBtn) {
+            wspBtn.classList.remove('disabled');
+            wspBtn.href = `https://wa.me/${JPEX_WHATSAPP_PHONE}?text=${encodeURIComponent(lines.join('\n'))}`;
+        }
+    }
+
+    document.getElementById('jpexClearCartBtn')?.addEventListener('click', clearCart);
+
+    window.jpexCart = {
+        addItem: addItem,
+        updateQty: updateQty,
+        clearCart: clearCart,
+        renderCart: renderCart
+    };
+
+    window.addEventListener('DOMContentLoaded', renderCart);
+    renderCart();
+})();
+</script>
 </body>
 </html>

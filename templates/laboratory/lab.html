@@ -196,9 +196,25 @@
                         </div>
                     {% endif %}
 
-                    <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success rounded-0 w-100 py-3 fw-bold text-uppercase">
-                        Pedir {{ session_result.product.name }} en Talle {{ session_result.recommended_size }} por WhatsApp
-                    </a>
+                    <div class="d-grid gap-2">
+                        <button type="button"
+                                class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase"
+                                onclick="window.jpexCart && window.jpexCart.addItem({
+                                    id: '{{ session_result.product.id }}',
+                                    name: '{{ session_result.product.name|escapejs }}',
+                                    price: '{{ session_result.product.price|floatformat:0 }}',
+                                    size: '{{ session_result.recommended_size|escapejs }}',
+                                    color: '',
+                                    image: '{% if session_result.product.image %}{{ session_result.product.image.url }}{% else %}{{ selected_garment_url|default:'' }}{% endif %}',
+                                    qty: 1
+                                })">
+                            🛒 Agregar {{ session_result.product.name }} (Talle {{ session_result.recommended_size }}) al Carrito
+                        </button>
+
+                        <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success rounded-0 w-100 py-3 fw-bold text-uppercase">
+                            📲 Pedir solo esta prenda por WhatsApp
+                        </a>
+                    </div>
                 {% else %}
                     <div class="text-center py-5 text-muted">
                         <p class="fw-bold text-uppercase mb-2">Todavía no generaste tu prueba</p>
@@ -236,7 +252,6 @@
     }
 
     productSelect?.addEventListener('change', updateGarmentPreview);
-    // Ejecutar apenas carga la página para mostrar siempre la foto de la prenda activa
     window.addEventListener('DOMContentLoaded', updateGarmentPreview);
 
     document.getElementById('labForm')?.addEventListener('submit', function() {

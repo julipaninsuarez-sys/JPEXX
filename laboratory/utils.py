@@ -1,22 +1,13 @@
 import os
 import shutil
-import urllib.request
-import json
 from PIL import Image, ImageOps
 from django.conf import settings
-from django.db.models.fields.files import FileField
 from gradio_client import Client, handle_file
 
 # ==============================================================================
-# CONFIGURACIÓN DE PROVEEDORES DE IA (GRATIS HOY + LISTO PARA API PAGA MAÑANA)
+# CONFIGURACIÓN DE PROVEEDORES DE IA
 # ==============================================================================
-# 1. Token gratuito de Hugging Face (opcional, amplía tu cuota diaria ZeroGPU gratis)
 HF_TOKEN = os.environ.get("HF_TOKEN", getattr(settings, "HF_TOKEN", None))
-
-# 2. Proveedor activo:
-#    - "free_multi" (Por defecto): Usa los mejores motores gratuitos en cascada
-#      (1° yisol/IDM-VTON -> 2° Nymbo/Virtual-Try-On -> 3° levihsu/OOTDiffusion)
-#    - "fashn_commercial": Listo para cuando vendas tu ropa real y actives FASHN AI API
 TRYON_PROVIDER = os.environ.get("TRYON_PROVIDER", getattr(settings, "TRYON_PROVIDER", "free_multi"))
 FASHN_API_KEY = os.environ.get("FASHN_API_KEY", getattr(settings, "FASHN_API_KEY", None))
 
@@ -26,7 +17,6 @@ def _detect_garment_morphology(product, sleeve_length_cm=None):
     Detecta automáticamente si la prenda es una musculosa (sin mangas),
     una remera manga corta o un buzo/campera manga larga según su nombre,
     categoría y medida de manga.
-    ¡Esto corrige el problema de que la IA le dibuje mangas a una musculosa!
     """
     text_to_check = f"{product.name} {getattr(product.category, 'name', '')}".lower()
 
@@ -56,7 +46,7 @@ def _detect_garment_morphology(product, sleeve_length_cm=None):
 
 def _translate_fabric_and_fit(detail_obj, fallback_fit='oversize'):
     """
-    Traduce los nuevos campos técnicos del Admin (ProductMeasurementDetail)
+    Traduce los atributos físicos (tanto de un SizeTemplate como de un ProductMeasurementDetail)
     a instrucciones precisas en inglés para el motor de difusión IDM-VTON.
     """
     fabric_map = {
@@ -87,7 +77,6 @@ def _translate_fabric_and_fit(detail_obj, fallback_fit='oversize'):
         extra_prompt = (detail_obj.ai_extra_prompt or '').strip()
         return fabric_en, fabric_es, fit_en, fit_es, stretch_es, extra_prompt
 
-    # Respaldo si usa la tabla vieja
     fit_en, fit_es = fit_map.get(fallback_fit, fit_map['oversize'])
     return (
         'heavyweight structured streetwear cotton fabric',
@@ -101,36 +90,27 @@ def _translate_fabric_and_fit(detail_obj, fallback_fit='oversize'):
 
 def get_product_sizes_data(product):
     """
-    Unifica las medidas cargadas en el nuevo ProductMeasurementDetail (products/models.py)
-    o en el anterior ProductMeasurement (laboratory/models.py), devolviendo una lista
-    ordenada de diccionarios con todas las especificaciones por talle.
+    Obtiene las especificaciones de talles de la prenda con BAJO ACOPLAMIENTO:
+    1. Delega primero en `product.get_size_specs()`, que resuelve automáticamente
+       si el producto usa una Plantilla Reutilizable (`SizeTemplate`) o medidas
+       individuales (`ProductMeasurementDetail`).
+    2. Mantiene compatibilidad hacia atrás con `ProductMeasurement` o tabla por defecto.
     """
-    sizes_list = []
+    if not product:
+        return []
 
-    # 1. Prioridad máxima: Nuevo modelo detallado ProductMeasurementDetail (Etapa 2)
-    if hasattr(product, 'detailed_measurements'):
-        detailed_qs = product.detailed_measurements.select_related('size').all()
-        if detailed_qs.exists():
-            for dm in detailed_qs:
-                sizes_list.append({
-                    'size_name': dm.size.name,
-                    'chest_cm': float(dm.chest_width_cm),
-                    'length_cm': float(dm.total_length_cm),
-                    'shoulder_cm': float(dm.shoulder_width_cm) if dm.shoulder_width_cm else None,
-                    'sleeve_cm': float(dm.sleeve_length_cm) if dm.sleeve_length_cm else None,
-                    'hem_cm': float(dm.hem_width_cm) if dm.hem_width_cm else None,
-                    'detail_obj': dm,
-                    'source': 'detailed',
-                })
-            sizes_list.sort(key=lambda x: x['chest_cm'])
-            return sizes_list
+    # 1. Delegación limpia al método de dominio del modelo Product
+    if hasattr(product, 'get_size_specs'):
+        specs = product.get_size_specs()
+        if specs:
+            return specs
 
-    # 2. Segunda prioridad: Modelo ProductMeasurement de laboratory
+    # 2. Compatibilidad con tabla legacy si existiera
     if hasattr(product, 'measurements'):
         legacy_qs = product.measurements.all().order_by('chest_cm')
         if legacy_qs.exists():
-            for lm in legacy_qs:
-                sizes_list.append({
+            return [
+                {
                     'size_name': lm.size,
                     'chest_cm': float(lm.chest_cm),
                     'length_cm': float(lm.length_cm),
@@ -140,18 +120,19 @@ def get_product_sizes_data(product):
                     'detail_obj': None,
                     'fallback_fit': lm.fit_type,
                     'source': 'legacy',
-                })
-            return sizes_list
+                }
+                for lm in legacy_qs
+            ]
 
-    # 3. Respaldo automático si el administrador aún no cargó medidas para esta prenda
+    # 3. Respaldo por defecto si una prenda fue creada sin plantilla ni medidas
     default_table = [
         ('S', 53.0, 70.0, 49.0),
         ('M', 56.0, 72.0, 52.0),
         ('L', 59.0, 75.0, 55.0),
         ('XL', 62.0, 77.0, 58.0),
     ]
-    for s_name, chest, length, shoulder in default_table:
-        sizes_list.append({
+    return [
+        {
             'size_name': s_name,
             'chest_cm': chest,
             'length_cm': length,
@@ -161,42 +142,45 @@ def get_product_sizes_data(product):
             'detail_obj': None,
             'fallback_fit': 'oversize',
             'source': 'default',
-        })
-    return sizes_list
+        }
+        for s_name, chest, length, shoulder in default_table
+    ]
+
+
+def get_product_image_info(product):
+    """
+    Delega la resolución de imagen al método `product.get_image_info()` del modelo Product,
+    manteniendo bajo acoplamiento entre `laboratory` y `products`.
+    """
+    if not product:
+        return None, None
+    if hasattr(product, 'get_image_info'):
+        return product.get_image_info()
+    return None, None
 
 
 def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requested_size=None):
     """
     Motor Biométrico V2:
-    1. Calcula el ancho de torso plano estimado y ancho de hombros del usuario.
-    2. Evalúa las fichas técnicas detalladas (ProductMeasurementDetail).
-    3. Determina el talle ideal recomendado Y permite simular un talle específico
-       si el usuario eligió probarse p.ej. un S o un XL a propósito.
-    4. Construye un prompt morfológico ultra específico para la IA.
-    Devuelve: (selected_size, fit_explanation, ai_prompt, extra_diagnostics_dict)
+    Evalúa la curva de talles (proveniente de una SizeTemplate o de medidas individuales),
+    calcula el talle ideal o simula el talle elegido manualmente por el usuario,
+    y construye el prompt morfológico para la IA.
     """
-    # Estimación antropométrica de ancho de pecho plano y hombros del cliente
     base_chest_cm = 38.0 + (weight_kg * 0.16) + ((height_cm - 170) * 0.05)
-    base_shoulder_cm = 39.0 + (weight_kg * 0.09) + ((height_cm - 170) * 0.04)
 
     if preferred_fit == 'ajustado':
         desired_ease_cm = 3.0
-        user_fit_intent_en = "fitted closer to body"
     elif preferred_fit == 'regular':
         desired_ease_cm = 6.5
-        user_fit_intent_en = "classic regular fit on torso"
     else:
         desired_ease_cm = 10.5
-        user_fit_intent_en = "relaxed oversized streetwear fit with dropped shoulders"
 
     target_garment_width = round(base_chest_cm + desired_ease_cm, 1)
     sizes_data = get_product_sizes_data(product)
 
-    # Talle ideal según el algoritmo
     ideal_entry = min(sizes_data, key=lambda item: abs(item['chest_cm'] - target_garment_width))
     ideal_size_name = ideal_entry['size_name']
 
-    # Si el usuario pidió probar un talle puntual (ej: "XL"), buscamos ese talle
     chosen_entry = ideal_entry
     user_forced_size = False
     if requested_size and requested_size != 'auto':
@@ -212,7 +196,6 @@ def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requ
     garment_shoulder = round(chosen_entry['shoulder_cm']) if chosen_entry['shoulder_cm'] else None
     garment_sleeve = round(chosen_entry['sleeve_cm']) if chosen_entry['sleeve_cm'] else None
 
-    # Diferencia real (holgura/ease) entre la prenda elegida y el torso del cliente
     real_diff = round(chosen_entry['chest_cm'] - base_chest_cm, 1)
 
     if real_diff < 2:
@@ -236,14 +219,12 @@ def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requ
         visual_drape_en = "extra baggy mega-oversized streetwear fit, very wide chest and low dropped shoulders"
         calce_badge = "Extra Holgado"
 
-    # Obtenemos datos morfológicos y de tela
     garment_type_en, garment_type_es = _detect_garment_morphology(product, garment_sleeve)
     fabric_en, fabric_es, fit_en, fit_es, stretch_es, extra_prompt = _translate_fabric_and_fit(
         chosen_entry.get('detail_obj'),
         chosen_entry.get('fallback_fit', 'oversize')
     )
 
-    # Armamos la tabla comparativa de todos los talles para mostrar en pantalla
     size_comparison = []
     for item in sizes_data:
         diff_item = round(item['chest_cm'] - base_chest_cm, 1)
@@ -269,7 +250,6 @@ def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requ
             'is_selected': item['size_name'] == final_size,
         })
 
-    # Explicación detallada para el cliente
     shoulder_text = f", {garment_shoulder} cm de hombros" if garment_shoulder else ""
     if user_forced_size and final_size != ideal_size_name:
         fit_explanation = (
@@ -285,7 +265,6 @@ def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requ
             f"{garment_length} cm de largo{shoulder_text} ({fit_es} en {fabric_es}), por lo que te quedará {sensacion_calce}."
         )
 
-    # Prompt enriquecido para IDM-VTON / OOTDiffusion
     prompt_parts = [
         f"{product.name}",
         garment_type_en,
@@ -317,99 +296,19 @@ def calculate_size_and_prompt(product, height_cm, weight_kg, preferred_fit, requ
     return final_size, fit_explanation, ai_prompt, diagnostics
 
 
-def get_product_image_info(product):
-    """
-    Busca automáticamente la imagen del producto y devuelve (path_absoluto, url_publica).
-    Soporta:
-    1. Fotos subidas desde el Panel Admin (product.image en carpeta media/).
-    2. Imágenes preexistentes mapeadas en products/cutouts.py o carpeta static/.
-    """
-    if not product:
-        return None, None
-
-    # 1. Prioridad: Imagen subida por el usuario desde el Admin (ImageField / FileField)
-    priority_fields = ['image', 'imagen', 'photo', 'foto', 'front_image', 'cutout', 'cutout_image']
-    for field_name in priority_fields:
-        field = getattr(product, field_name, None)
-        if field and getattr(field, 'name', None):
-            img_url = None
-            img_path = None
-            try:
-                img_url = field.url
-            except Exception:
-                img_url = f"{settings.MEDIA_URL}{field.name}"
-
-            try:
-                if hasattr(field, 'path') and os.path.exists(field.path):
-                    img_path = field.path
-                else:
-                    candidate_path = os.path.join(settings.MEDIA_ROOT, str(field.name))
-                    if os.path.exists(candidate_path):
-                        img_path = candidate_path
-            except Exception:
-                pass
-
-            if img_url:
-                return img_path, img_url
-
-    # Revisión general por si el campo FileField tiene otro nombre en el modelo
-    for model_field in product._meta.fields:
-        if isinstance(model_field, FileField):
-            val = getattr(product, model_field.name, None)
-            if val and getattr(val, 'name', None):
-                try:
-                    img_url = val.url
-                except Exception:
-                    img_url = f"{settings.MEDIA_URL}{val.name}"
-                img_path = None
-                try:
-                    if hasattr(val, 'path') and os.path.exists(val.path):
-                        img_path = val.path
-                except Exception:
-                    pass
-                return img_path, img_url
-
-    # 2. Respaldo: Si es una prenda vieja que usa products/cutouts.py en static/
-    try:
-        from products.cutouts import get_cutout_for_product
-        cutout_rel = get_cutout_for_product(product)
-        if cutout_rel:
-            static_url = settings.STATIC_URL if settings.STATIC_URL.endswith('/') else f"{settings.STATIC_URL}/"
-            img_url = cutout_rel if cutout_rel.startswith('/') else f"{static_url}{cutout_rel.lstrip('/')}"
-            # Buscar el archivo físico en STATICFILES_DIRS o static/ para pasarlo a la IA
-            search_dirs = list(getattr(settings, 'STATICFILES_DIRS', []))
-            search_dirs.append(os.path.join(settings.BASE_DIR, 'static'))
-            for s_dir in search_dirs:
-                candidate = os.path.join(s_dir, cutout_rel.replace('/static/', '').lstrip('/'))
-                if os.path.exists(candidate):
-                    return candidate, img_url
-            return None, img_url
-    except Exception:
-        pass
-
-    return None, None
-
-
 def prepare_rgb_jpg_for_ai(img_path, temp_name, is_garment=False):
     """
-    Preprocesador de Estudio 3:4 (768x1024) para Modelos de Difusión Virtual Try-On:
-    1. Aplica ImageOps.exif_transpose() para evitar que fotos sacadas con el celular
-       entren rotadas 90 grados a la IA.
-    2. Elimina transparencias (RGBA -> RGB sobre blanco puro).
-    3. Si es una prenda (is_garment=True), la centra en un lienzo de estudio 768x1024 (ratio 3:4)
-       con un pequeño margen blanco para que IDM-VTON no deforme las estampas ni el ancho.
+    Preprocesador de Estudio 3:4 (768x1024) para Modelos de Difusión Virtual Try-On.
     """
     temp_dir = os.path.join(settings.MEDIA_ROOT, 'laboratory', 'temp')
     os.makedirs(temp_dir, exist_ok=True)
     out_path = os.path.join(temp_dir, f"{temp_name}.jpg")
 
-    target_size = (768, 1024)  # Proporción nativa 3:4 de IDM-VTON y OOTDiffusion
+    target_size = (768, 1024)
 
     with Image.open(img_path) as raw_img:
-        # Corregir rotación EXIF de celulares (iPhone / Android)
         img = ImageOps.exif_transpose(raw_img)
 
-        # Pasar cualquier transparencia a fondo blanco puro
         if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
             rgba_img = img.convert('RGBA')
             white_bg = Image.new('RGB', rgba_img.size, (255, 255, 255))
@@ -419,7 +318,6 @@ def prepare_rgb_jpg_for_ai(img_path, temp_name, is_garment=False):
             rgb_img = img.convert('RGB')
 
         if is_garment:
-            # Centramos la prenda en un lienzo 768x1024 sin recortarla ni estirarla
             rgb_img.thumbnail((680, 900), Image.Resampling.LANCZOS)
             studio_canvas = Image.new('RGB', target_size, (255, 255, 255))
             offset_x = (target_size[0] - rgb_img.width) // 2
@@ -427,7 +325,6 @@ def prepare_rgb_jpg_for_ai(img_path, temp_name, is_garment=False):
             studio_canvas.paste(rgb_img, (offset_x, offset_y))
             final_img = studio_canvas
         else:
-            # Para la foto del usuario mantenemos buena resolución vertical sin deformar
             rgb_img.thumbnail((1024, 1365), Image.Resampling.LANCZOS)
             final_img = rgb_img
 
@@ -437,19 +334,12 @@ def prepare_rgb_jpg_for_ai(img_path, temp_name, is_garment=False):
 
 
 def _extract_gradio_result_path(result):
-    """
-    Extrae de forma segura la ruta del archivo de imagen devuelto por distintos
-    Spaces de Gradio (ya sea tupla, lista de galería o diccionario).
-    """
     if not result:
         return None
-
     if isinstance(result, str):
         return result
-
     if isinstance(result, dict):
         return result.get('image') or result.get('path') or result.get('url')
-
     if isinstance(result, (list, tuple)) and len(result) > 0:
         first_item = result[0]
         if isinstance(first_item, str):
@@ -458,29 +348,18 @@ def _extract_gradio_result_path(result):
             return first_item.get('image') or first_item.get('path')
         if isinstance(first_item, (list, tuple)) and len(first_item) > 0:
             return _extract_gradio_result_path(first_item[0])
-
     return None
 
 
 def _run_idm_vton_space(space_id, clean_user_jpg, clean_garment_jpg, ai_prompt):
-    """
-    Ejecuta inferencia en cualquier Space compatible con la arquitectura IDM-VTON
-    (como 'yisol/IDM-VTON' o su espejo 'Nymbo/Virtual-Try-On').
-    Usa is_checked_crop=True para que el modelo encuadre automáticamente en 3:4
-    y 35 pasos de denoise para mayor fidelidad en estampas.
-    """
-    if HF_TOKEN:
-        client = Client(space_id, hf_token=HF_TOKEN)
-    else:
-        client = Client(space_id)
-
+    client = Client(space_id, hf_token=HF_TOKEN) if HF_TOKEN else Client(space_id)
     result = client.predict(
         dict={"background": handle_file(clean_user_jpg), "layers": [], "composite": None},
         garm_img=handle_file(clean_garment_jpg),
         garment_des=ai_prompt,
         is_checked=True,
-        is_checked_crop=True,  # Auto-crop 3:4 activado para evitar distorsión de hombros/cuerpo
-        denoise_steps=35,      # Mayor nitidez en logos y textura de algodón
+        is_checked_crop=True,
+        denoise_steps=35,
         seed=42,
         api_name="/tryon"
     )
@@ -488,15 +367,7 @@ def _run_idm_vton_space(space_id, clean_user_jpg, clean_garment_jpg, ai_prompt):
 
 
 def _run_ootdiffusion_space(clean_user_jpg, clean_garment_jpg):
-    """
-    Motor de respaldo gratuito #3: levihsu/OOTDiffusion (Modelo HD de medio cuerpo superior).
-    Se activa automáticamente si los servidores de IDM-VTON están saturados.
-    """
-    if HF_TOKEN:
-        client = Client("levihsu/OOTDiffusion", hf_token=HF_TOKEN)
-    else:
-        client = Client("levihsu/OOTDiffusion")
-
+    client = Client("levihsu/OOTDiffusion", hf_token=HF_TOKEN) if HF_TOKEN else Client("levihsu/OOTDiffusion")
     result = client.predict(
         vton_img=handle_file(clean_user_jpg),
         garm_img=handle_file(clean_garment_jpg),
@@ -511,11 +382,7 @@ def _run_ootdiffusion_space(clean_user_jpg, clean_garment_jpg):
 
 def generate_tryon_image(session_id, user_img_path, garment_img_path, ai_prompt):
     """
-    Router Principal de Generación Virtual Try-On:
-    1. Normaliza la foto del usuario (EXIF + RGB) y la foto de la prenda (Estudio 768x1024).
-    2. Recorre una cascada de motores gratuitos de alta calidad (IDM-VTON Principal ->
-       IDM-VTON Mirror -> OOTDiffusion HD) para máxima disponibilidad y calidad sin pagar.
-    Devuelve: (ruta_relativa_resultado, mensaje_error)
+    Router Principal de Generación Virtual Try-On en cascada.
     """
     try:
         clean_user_jpg = prepare_rgb_jpg_for_ai(user_img_path, f"user_{session_id}", is_garment=False)
@@ -523,7 +390,6 @@ def generate_tryon_image(session_id, user_img_path, garment_img_path, ai_prompt)
     except Exception as prep_err:
         return None, f"Error al preprocesar las imágenes con Pillow: {prep_err}"
 
-    # Lista de motores gratuitos en orden de calidad para estampas urbanas
     free_engines = [
         ("IDM-VTON Principal (yisol/IDM-VTON)", lambda: _run_idm_vton_space("yisol/IDM-VTON", clean_user_jpg, clean_garment_jpg, ai_prompt)),
         ("IDM-VTON Mirror (Nymbo/Virtual-Try-On)", lambda: _run_idm_vton_space("Nymbo/Virtual-Try-On", clean_user_jpg, clean_garment_jpg, ai_prompt)),

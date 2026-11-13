@@ -22,7 +22,11 @@ def live_search_api(request):
     if len(query) < 2:
         return JsonResponse({'results': []})
 
-    matched_products = Product.objects.filter(name__icontains=query)[:6]
+    matched_products = (
+        Product.objects
+        .filter(available=True, name__icontains=query)
+        .select_related('category')[:6]
+    )
 
     results = []
     for prod in matched_products:
@@ -40,13 +44,20 @@ def live_search_api(request):
 
 def lab_view(request, product_id=None):
     """
-    Vista principal de JPEX LAB V2:
-    - Conecta con las fichas técnicas detalladas (ProductMeasurementDetail).
-    - Permite cálculo automático del talle ideal O prueba de un talle específico (S, M, L, XL).
-    - Genera una tabla comparativa de calce para todos los talles de esa prenda.
-    - Ejecuta el Router Multi-Motor de IA con preprocesamiento de estudio 768x1024.
+    Vista principal de JPEX LAB V2 optimizada con select_related y prefetch_related
+    para soportar tanto Plantillas de Talles Reutilizables (SizeTemplate) como
+    medidas específicas por prenda (ProductMeasurementDetail) sin consultas N+1.
     """
-    all_products = Product.objects.prefetch_related('detailed_measurements__size', 'measurements').all()
+    product_qs = (
+        Product.objects
+        .select_related('category', 'size_template')
+        .prefetch_related(
+            'size_template__items__size',
+            'detailed_measurements__size',
+            'measurements',
+        )
+    )
+    all_products = list(product_qs.all())
 
     products_with_img = []
     for prod in all_products:
@@ -56,18 +67,16 @@ def lab_view(request, product_id=None):
 
     selected_product = None
     if product_id:
-        selected_product = get_object_or_404(Product, id=product_id)
+        selected_product = get_object_or_404(product_qs, id=product_id)
     elif products_with_img:
         products_valid = [p for p in products_with_img if p.resolved_image_url]
         selected_product = products_valid[0] if products_valid else products_with_img[0]
 
     selected_garment_path, selected_garment_url = get_product_image_info(selected_product)
 
-    # Obtenemos los talles configurados para la prenda seleccionada
     product_sizes_data = get_product_sizes_data(selected_product) if selected_product else []
     available_size_names = [item['size_name'] for item in product_sizes_data]
 
-    # Permite recibir ?size=L si viene desde la página de detalle del producto
     requested_size = request.GET.get('size', 'auto')
 
     session_result = None
@@ -77,7 +86,7 @@ def lab_view(request, product_id=None):
 
     if request.method == 'POST':
         posted_product_id = request.POST.get('product_id') or product_id
-        selected_product = get_object_or_404(Product, id=posted_product_id)
+        selected_product = get_object_or_404(product_qs, id=posted_product_id)
         selected_garment_path, selected_garment_url = get_product_image_info(selected_product)
 
         product_sizes_data = get_product_sizes_data(selected_product)
@@ -127,9 +136,9 @@ def lab_view(request, product_id=None):
             mensaje_wsp = (
                 f"¡Hola JPEX! Probé la prenda *{selected_product.name}* en JPEX LAB. "
                 f"Mido {height_cm} cm, peso {weight_kg} kg y probé el *Talle {rec_size}* "
-                f"(calce {preferred_fit}). ¿Tienen stock disponible?"
+                f"(Tipo :  {preferred_fit}). RESPONDAN RAPIDO! Gracias."
             )
-            numero_whatsapp = "+5492213146934"
+            numero_whatsapp = "5492213146934"
             whatsapp_url = f"https://wa.me/{numero_whatsapp}?text={quote(mensaje_wsp)}"
 
     context = {
