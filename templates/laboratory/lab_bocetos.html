@@ -5,8 +5,8 @@
 
 {% block extra_head %}
 <meta name="robots" content="noindex">
-<link href="{% static 'css/lab-fx.css' %}?v=1" rel="stylesheet">
-<link href="{% static 'css/lab-bocetos.css' %}?v=1" rel="stylesheet">
+<link href="{% static 'css/lab-fx.css' %}?v=7" rel="stylesheet">
+<link href="{% static 'css/lab-bocetos.css' %}?v=6" rel="stylesheet">
 {% endblock %}
 
 {% block body_class %}jpx-lab-page jpx-lab-sketches{% endblock %}
@@ -20,16 +20,19 @@
 
 {# Panel para probar variantes de cada efecto. Lo arma lab-bocetos.js. #}
 <aside class="jpx-sketch-panel" id="jpx-sketch-panel" aria-label="Panel de bocetos">
-    <button class="jpx-sketch-panel__toggle" type="button" aria-expanded="true" aria-controls="jpx-sketch-panel-body">
-        <span>Bocetos</span>
-    </button>
+    <div class="jpx-sketch-panel__head">
+        <button class="jpx-sketch-panel__toggle" type="button" aria-expanded="true" aria-controls="jpx-sketch-panel-body">
+            <span>Bocetos</span>
+        </button>
+        <button class="jpx-sketch-panel__hide" type="button" title="El panel desaparece 8 segundos (Esc lo trae antes)">Esconder panel 8 s</button>
+    </div>
     <div class="jpx-sketch-panel__body" id="jpx-sketch-panel-body">
         <div class="jpx-sketch-panel__groups"></div>
         <div class="jpx-sketch-panel__footer">
             <button class="jpx-sketch-panel__off" type="button">Todo apagado</button>
             <label class="jpx-sketch-panel__label" for="jpx-sketch-summary">Selección</label>
             <div class="jpx-sketch-panel__summary">
-                <textarea id="jpx-sketch-summary" rows="3" readonly></textarea>
+                <textarea id="jpx-sketch-summary" rows="4" readonly></textarea>
                 <button class="jpx-sketch-panel__copy" type="button">Copiar</button>
             </div>
             <p class="jpx-sketch-panel__note" hidden></p>
@@ -38,8 +41,8 @@
 </aside>
 
 <script src="{% static 'js/lab-pan.js' %}?v=3" defer></script>
-<script src="{% static 'js/lab-fx.js' %}?v=1" defer></script>
-<script src="{% static 'js/lab-bocetos.js' %}?v=1" defer></script>
+<script src="{% static 'js/lab-fx.js' %}?v=7" defer></script>
+<script src="{% static 'js/lab-bocetos.js' %}?v=6" defer></script>
 {% endblock %}
 
 {% block footer %}{% endblock %}

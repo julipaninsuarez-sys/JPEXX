@@ -22,11 +22,59 @@
     font-family: var(--font-body);
     font-size: .8rem;
 }
+/* Plegado: solo una pestaña chica pegada al borde. */
 .jpx-sketch-panel.is-collapsed {
     width: auto;
+    top: 8px;
+    right: 0;
+    border-right: 0;
+    border-radius: 5px 0 0 5px;
 }
-.jpx-sketch-panel.is-collapsed .jpx-sketch-panel__body {
+.jpx-sketch-panel.is-collapsed .jpx-sketch-panel__body,
+.jpx-sketch-panel.is-collapsed .jpx-sketch-panel__hide {
     display: none;
+}
+.jpx-sketch-panel.is-collapsed .jpx-sketch-panel__toggle {
+    padding: 6px 9px;
+    font-size: .78rem;
+    gap: 8px;
+}
+/* Escondido unos segundos para ver lo que tapa. */
+.jpx-sketch-panel {
+    transition: opacity .25s, visibility .25s;
+}
+.jpx-sketch-panel.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.jpx-sketch-panel__head {
+    display: flex;
+    align-items: center;
+}
+.jpx-sketch-panel__hide {
+    flex: 0 0 auto;
+    margin-right: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 4px;
+    color: var(--bone);
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: .72rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.jpx-sketch-panel__hide:hover {
+    border-color: var(--mustard);
+}
+.jpx-sketch-group__hint {
+    margin: -2px 0 6px;
+    color: var(--mustard);
+    font-size: .68rem;
+    line-height: 1.25;
 }
 
 .jpx-sketch-panel__toggle {
@@ -34,7 +82,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 9px 12px;
     background: none;
     border: 0;
@@ -213,4 +262,201 @@
         max-width: calc(100% - 16px);
         max-height: calc(100% - 16px);
     }
+}
+
+/* ---------- Cápsula (prueba de tamaño e integración con el ambiente) ---------- */
+/* --cap-power (lo pone lab-bocetos.js): 1 = normal; menos = bajón de corriente. */
+.jpx-capsule,
+.jpx-capsule-floor {
+    position: absolute;
+    aspect-ratio: 612 / 1175;
+    pointer-events: none;
+}
+.jpx-capsule[hidden],
+.jpx-capsule-floor[hidden] {
+    display: none;
+}
+.jpx-capsule {
+    z-index: 5;
+}
+/* Niebla B: la niebla del lugar pasa por detrás y solo queda una franja al ras del piso. */
+.jpx-capsule.cap-niebla-b {
+    z-index: 7;
+}
+.jpx-capsule__img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: none;
+}
+/* Luz de adentro apagada: se ve más cuanto menos potencia hay. */
+.jpx-capsule__off {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    opacity: calc(1 - var(--cap-power, 1));
+}
+/* Sombra de apoyo sobre el piso. */
+.jpx-capsule__shadow {
+    position: absolute;
+    left: -12%;
+    right: -12%;
+    bottom: -3%;
+    height: 9%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, .8), rgba(0, 0, 0, 0));
+}
+
+/* Color: igualar brillo, contraste y nitidez con el fondo. */
+.cap-color-a .jpx-capsule__img,
+.cap-color-a .jpx-capsule__off {
+    filter: brightness(.86) contrast(1.06) saturate(.85) blur(.3px);
+}
+.cap-color-b .jpx-capsule__img,
+.cap-color-b .jpx-capsule__off {
+    filter: brightness(.72) contrast(1.1) saturate(.8) blur(.4px);
+}
+
+/* Luz del lugar: naranja de la puerta (arriba, desde atrás), rojo de los tubos en los
+ * costados y rojo del círculo desde abajo. Recortada con la forma de la cápsula (mask). */
+.jpx-capsule__light {
+    position: absolute;
+    inset: 0;
+    display: none;
+    mix-blend-mode: screen;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+}
+.cap-luz-a .jpx-capsule__light,
+.cap-luz-b .jpx-capsule__light {
+    display: block;
+}
+.cap-luz-a .jpx-capsule__light {
+    background:
+        linear-gradient(to bottom, rgba(255, 140, 50, .22), rgba(255, 140, 50, 0) 20%),
+        linear-gradient(to right, rgba(255, 30, 30, .2), rgba(255, 30, 30, 0) 16%, rgba(255, 30, 30, 0) 84%, rgba(255, 30, 30, .2)),
+        linear-gradient(to top, rgba(255, 40, 40, .22), rgba(255, 40, 40, 0) 16%);
+}
+.cap-luz-b .jpx-capsule__light {
+    background:
+        linear-gradient(to bottom, rgba(255, 140, 50, .42), rgba(255, 140, 50, 0) 26%),
+        linear-gradient(to right, rgba(255, 30, 30, .38), rgba(255, 30, 30, 0) 20%, rgba(255, 30, 30, 0) 80%, rgba(255, 30, 30, .38)),
+        linear-gradient(to top, rgba(255, 40, 40, .4), rgba(255, 40, 40, 0) 20%);
+}
+
+/* Niebla al ras del piso, por delante de la base (solo con Niebla B). */
+.jpx-capsule__mist {
+    position: absolute;
+    left: -60%;
+    right: -60%;
+    bottom: -5%;
+    height: 13%;
+    display: none;
+    overflow: hidden;
+    -webkit-mask-image: radial-gradient(closest-side, #000 45%, transparent);
+    mask-image: radial-gradient(closest-side, #000 45%, transparent);
+}
+.cap-niebla-b .jpx-capsule__mist {
+    display: block;
+}
+.jpx-capsule__mist-layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -20%;
+    width: 140%;
+    background:
+        radial-gradient(ellipse 18% 55% at 20% 60%, rgba(175, 140, 145, .35), transparent),
+        radial-gradient(ellipse 22% 45% at 52% 55%, rgba(160, 125, 130, .3), transparent),
+        radial-gradient(ellipse 16% 60% at 80% 62%, rgba(175, 140, 145, .32), transparent);
+    animation: jpx-cap-mist 16s ease-in-out infinite alternate;
+}
+.jpx-capsule__mist-layer--2 {
+    opacity: .7;
+    transform: scaleX(-1);
+    animation-duration: 23s;
+    animation-delay: -8s;
+}
+@keyframes jpx-cap-mist {
+    from { translate: -8% 0; }
+    to { translate: 8% 0; }
+}
+
+/* Piso: resplandor rojo y reflejo. Se suma a la luz del fondo (screen): solo aporta luz. */
+.jpx-capsule-floor {
+    z-index: 3;
+    mix-blend-mode: screen;
+}
+.jpx-capsule-floor__glow {
+    position: absolute;
+    left: -80%;
+    right: -80%;
+    bottom: -10%;
+    height: 22%;
+    display: none;
+    opacity: var(--cap-power, 1);
+}
+.jpx-capsule-floor__glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(closest-side, rgba(255, 25, 25, .42), rgba(255, 25, 25, .12) 55%, rgba(255, 25, 25, 0));
+}
+.cap-resplandor-a .jpx-capsule-floor__glow,
+.cap-resplandor-b .jpx-capsule-floor__glow {
+    display: block;
+}
+.cap-resplandor-b .jpx-capsule-floor__glow::before {
+    animation: jpx-cap-breathe 4.5s ease-in-out infinite;
+}
+@keyframes jpx-cap-breathe {
+    0%, 100% { opacity: .55; transform: scale(.94); }
+    50% { opacity: 1; transform: scale(1.04); }
+}
+/* Reflejo en el piso mojado: la cápsula dada vuelta, aplastada, borrosa y que se desvanece. */
+.jpx-capsule-floor__refl {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    transform-origin: 50% 100%;
+    transform: scaleY(-.5);
+    filter: blur(3px) brightness(calc(.85 * var(--cap-power, 1)));
+    -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, .5) 30%, transparent 80%);
+    mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, .5) 30%, transparent 80%);
+}
+.cap-reflejo-a .jpx-capsule-floor__refl,
+.cap-reflejo-b .jpx-capsule-floor__refl {
+    display: block;
+}
+.cap-reflejo-a .jpx-capsule-floor__refl {
+    opacity: .4;
+}
+.cap-reflejo-b .jpx-capsule-floor__refl {
+    opacity: .75;
+    filter: blur(2px) brightness(var(--cap-power, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jpx-capsule__mist-layer,
+    .cap-resplandor-b .jpx-capsule-floor__glow::before {
+        animation: none;
+    }
+}
+
+.jpx-sketch-slider {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 8px;
+    margin-top: 8px;
+}
+.jpx-sketch-slider input {
+    grid-column: 1 / -1;
+    width: 100%;
+    accent-color: #c4161c;
 }

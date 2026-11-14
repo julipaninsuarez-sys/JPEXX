@@ -3,6 +3,10 @@
 
 {% block title %}JPEX Store — Lab{% endblock %}
 
+{% block extra_head %}
+<link href="{% static 'css/lab-fx.css' %}?v=7" rel="stylesheet">
+{% endblock %}
+
 {% block body_class %}jpx-lab-page{% endblock %}
 
 {% block content %}
@@ -186,7 +190,25 @@
     </div>
 </section>
 
-<script src="{% static 'js/lab-pan.js' %}?v=3" defer></script>
+{# El fondo queda quieto (sin lab-pan.js): Francisco eligió no moverlo con el mouse por ahora. #}
+<script src="{% static 'js/lab-fx.js' %}?v=7" defer></script>
+<script>
+    // Efectos del fondo elegidos en /lab/bocetos/ (2026-11-13).
+    // Tubos C · Lámpara C · Cámara A · Estática B · Niebla C · Chispas A · Ojos C ·
+    // Traje B · Enredaderas A · Círculo A · Bicho apagado.
+    const LAB_EFFECTS = {
+        tubos: 'c', lampara: 'c', camara: 'a', estatica: 'b', niebla: 'c', chispas: 'a',
+        ojos: 'c', traje: 'b', venas: 'a', circulo: 'a'
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+        const stage = document.querySelector('.jpx-lab__stage');
+        if (!stage || !window.JPEXLabFX) return;
+        window.JPEXLabFX.init(stage);
+        Object.keys(LAB_EFFECTS).forEach(function (id) {
+            window.JPEXLabFX.set(id, LAB_EFFECTS[id]);
+        });
+    });
+</script>
 <script>
     // Actualiza la miniatura de la prenda en vivo cuando cambiás el selector
     const productSelect = document.getElementById('productSelect');

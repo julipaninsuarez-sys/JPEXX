@@ -1,5 +1,6 @@
 /* Lab: capas de efectos sobre el escenario (ver static/js/lab-fx.js).
- * Todo va en porcentajes del escenario. Solo se anima transform y opacity. */
+ * Todo va en porcentajes del escenario. Solo se anima transform y opacity;
+ * los filtros y máscaras que aparecen acá son estáticos. */
 
 .jpx-fx,
 .fx-layer {
@@ -11,26 +12,41 @@
     position: absolute;
 }
 
+/* Caja de bordes difusos: degradé vertical en el fondo × degradé horizontal en la máscara.
+ * Variables: --c (color "r g b"), --a (opacidad), --fx / --fy (difuminado de cada borde). */
+.fx-soft {
+    position: absolute;
+    background: linear-gradient(to bottom,
+        rgb(var(--c) / 0) 0%,
+        rgb(var(--c) / var(--a)) var(--fy),
+        rgb(var(--c) / var(--a)) calc(100% - var(--fy)),
+        rgb(var(--c) / 0) 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 var(--fx), #000 calc(100% - var(--fx)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 var(--fx), #000 calc(100% - var(--fx)), transparent 100%);
+}
+.fx-soft--round {
+    background: radial-gradient(closest-side, rgb(var(--c) / var(--a)) 45%, rgb(var(--c) / 0) 100%);
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
 /* ---------- 1. Tubos ---------- */
-.fx-tube__dim,
+.fx-layer > .fx-tube,
 .fx-tube__glow {
     position: absolute;
     inset: 0;
 }
-/* Capa oscura: tapa la luz que ya está pintada para poder "bajarla". */
+/* El tubo "apagado": un pedazo de la misma ilustración sin el resplandor rojo (vidrios
+ * y brillos blancos intactos), con bordes difusos. Se genera con
+ * laboratory/assets/build_lab_images.py y se ubica con width/height en % desde JS. */
 .fx-tube__dim {
-    background:
-        radial-gradient(ellipse 44% 9% at 50% 8%, rgba(6, 0, 2, .85), rgba(6, 0, 2, 0) 100%),
-        radial-gradient(ellipse 46% 10% at 50% 92%, rgba(6, 0, 2, .8), rgba(6, 0, 2, 0) 100%),
-        radial-gradient(ellipse 48% 50% at 50% 52%, rgba(6, 0, 2, .94) 0%, rgba(6, 0, 2, .82) 55%, rgba(6, 0, 2, 0) 100%);
+    position: absolute;
+    display: block;
+    max-width: none;
     opacity: 0;
 }
-/* Resplandor rojo que se suma a la imagen. */
+/* Resplandor rojo con la misma forma, que se suma a la imagen. */
 .fx-tube__glow {
-    background:
-        radial-gradient(ellipse 40% 7% at 50% 8%, rgba(255, 60, 40, .6), rgba(255, 40, 30, 0) 100%),
-        radial-gradient(ellipse 44% 10% at 50% 93%, rgba(255, 55, 35, .65), rgba(255, 40, 30, 0) 100%),
-        radial-gradient(ellipse 46% 50% at 50% 55%, rgba(230, 30, 25, .32), rgba(230, 30, 25, 0) 100%);
     mix-blend-mode: screen;
     opacity: 0;
 }
@@ -40,70 +56,71 @@
 .fx-tubos--a .fx-tube__dim {
     animation: fx-tube-dim var(--fx-dur, 5s) ease-in-out var(--fx-delay, 0s) infinite;
 }
-/* Pulso irregular: varios picos de distinta altura en cada vuelta. */
+/* Pulso irregular y profundo: de casi apagado a muy encendido. */
 @keyframes fx-tube-glow {
-    0%   { opacity: .1; }
-    18%  { opacity: .55; }
-    31%  { opacity: .35; }
-    52%  { opacity: .8; }
-    74%  { opacity: .25; }
-    86%  { opacity: .4; }
-    100% { opacity: .1; }
+    0%   { opacity: 0; }
+    18%  { opacity: .7; }
+    31%  { opacity: .4; }
+    52%  { opacity: 1; }
+    74%  { opacity: .15; }
+    86%  { opacity: .45; }
+    100% { opacity: 0; }
 }
 @keyframes fx-tube-dim {
-    0%   { opacity: .4; }
-    18%  { opacity: .05; }
-    31%  { opacity: .12; }
+    0%   { opacity: .6; }
+    18%  { opacity: 0; }
+    31%  { opacity: .05; }
     52%  { opacity: 0; }
-    74%  { opacity: .22; }
-    86%  { opacity: .12; }
-    100% { opacity: .4; }
+    74%  { opacity: .3; }
+    86%  { opacity: .05; }
+    100% { opacity: .6; }
 }
 
 /* ---------- 2. Lámpara ámbar ---------- */
 .fx-lamp__halo {
     background:
-        radial-gradient(ellipse 14% 9% at 50% 47%, rgba(255, 210, 120, .9), rgba(255, 170, 60, 0) 100%),
-        radial-gradient(ellipse 50% 50% at 50% 47%, rgba(255, 140, 30, .45), rgba(255, 110, 20, .12) 45%, rgba(255, 100, 20, 0) 100%);
+        radial-gradient(ellipse 13% 7% at 50% 47%, rgba(255, 225, 150, 1), rgba(255, 180, 70, 0) 100%),
+        radial-gradient(ellipse 50% 50% at 50% 47%, rgba(255, 150, 35, .7), rgba(255, 115, 20, .22) 40%, rgba(255, 100, 20, 0) 100%);
     mix-blend-mode: screen;
 }
-/* Luz que cae sobre la puerta. */
+/* Luz que cae sobre la puerta y la escalera. */
 .fx-lamp__wash {
-    background: radial-gradient(ellipse 55% 75% at 50% 0%, rgba(255, 120, 30, .2), rgba(255, 100, 20, .06) 50%, rgba(255, 100, 20, 0) 100%);
+    background: radial-gradient(ellipse 55% 80% at 50% 0%, rgba(255, 125, 30, .42), rgba(255, 100, 20, .14) 50%, rgba(255, 100, 20, 0) 100%);
     mix-blend-mode: screen;
 }
-/* Tapa de la barra pintada (para que se vea apagada). */
+/* Tapas de las luces pintadas (para que se vean apagadas). */
 .fx-lamp__cover,
 .fx-lamp__sidecover,
 .fx-cam__cover {
-    background: radial-gradient(closest-side, rgba(14, 5, 4, .96) 55%, rgba(14, 5, 4, 0) 100%);
+    background: radial-gradient(closest-side, rgba(12, 4, 3, .97) 55%, rgba(12, 4, 3, 0) 100%);
     opacity: 0;
 }
 .fx-lamp__side {
-    background: radial-gradient(closest-side, rgba(255, 190, 80, .85), rgba(255, 120, 20, .25) 35%, rgba(255, 110, 20, 0) 100%);
+    background: radial-gradient(closest-side, rgba(255, 205, 100, 1), rgba(255, 130, 25, .4) 30%, rgba(255, 110, 20, 0) 100%);
     mix-blend-mode: screen;
-    opacity: .5;
+    opacity: .7;
 }
-/* A: pulso lento. */
+/* A: pulso lento y amplio. */
 .fx-lampara--a .fx-lamp__halo,
 .fx-lampara--a .fx-lamp__wash,
 .fx-lampara--a .fx-lamp__side {
-    animation: fx-lamp-pulse 5.5s ease-in-out infinite alternate;
+    animation: fx-lamp-pulse 4s ease-in-out infinite alternate;
 }
 .fx-lampara--a .fx-lamp__cover,
 .fx-lampara--a .fx-lamp__sidecover {
-    animation: fx-lamp-pulse-cover 5.5s ease-in-out infinite alternate;
+    animation: fx-lamp-pulse-cover 4s ease-in-out infinite alternate;
 }
 .fx-lampara--a .fx-lamp__side--1,
 .fx-lampara--a .fx-lamp__sidecover--1 {
-    animation-delay: -2.7s;
+    animation-delay: -2s;
 }
 @keyframes fx-lamp-pulse {
-    from { opacity: .15; }
-    to   { opacity: .9; }
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 @keyframes fx-lamp-pulse-cover {
-    from { opacity: .55; }
+    from { opacity: .85; }
+    40%  { opacity: .2; }
     to   { opacity: 0; }
 }
 /* B: baliza de alarma (ciclo de 1.2 s); las lucecitas se alternan. */
@@ -122,53 +139,90 @@
 }
 @keyframes fx-lamp-beacon {
     0%   { opacity: 0; }
-    7%   { opacity: 1; }
-    24%  { opacity: .7; }
-    48%  { opacity: .08; }
+    6%   { opacity: 1; }
+    24%  { opacity: .8; }
+    46%  { opacity: .05; }
     100% { opacity: 0; }
 }
 @keyframes fx-lamp-beacon-cover {
-    0%   { opacity: .7; }
-    7%   { opacity: 0; }
+    0%   { opacity: .9; }
+    6%   { opacity: 0; }
     30%  { opacity: 0; }
-    55%  { opacity: .6; }
-    100% { opacity: .7; }
+    52%  { opacity: .85; }
+    100% { opacity: .9; }
 }
 
 /* ---------- 3. Cámara de seguridad ---------- */
 .fx-cam__halo {
-    background: radial-gradient(closest-side, rgba(255, 120, 110, .95), rgba(255, 30, 20, .45) 30%, rgba(255, 20, 10, 0) 100%);
+    background: radial-gradient(closest-side,
+        rgba(255, 150, 140, 1) 0%,
+        rgba(255, 40, 25, .85) 12%,
+        rgba(255, 25, 15, .45) 38%,
+        rgba(255, 20, 10, .16) 65%,
+        rgba(255, 20, 10, 0) 100%);
     mix-blend-mode: screen;
 }
-.fx-camara--a .fx-cam__halo { animation: fx-cam-a 2.4s steps(1, end) infinite; }
-.fx-camara--a .fx-cam__cover { animation: fx-cam-a-cover 2.4s steps(1, end) infinite; }
-.fx-camara--b .fx-cam__halo { animation: fx-cam-b 3.4s steps(1, end) infinite; }
-.fx-camara--b .fx-cam__cover { animation: fx-cam-b-cover 3.4s steps(1, end) infinite; }
+/* Destello breve cada vez que se enciende. */
+.fx-cam__flash {
+    background: radial-gradient(closest-side, rgba(255, 235, 230, 1) 0%, rgba(255, 90, 70, .7) 30%, rgba(255, 40, 20, 0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+}
+.fx-camara--a .fx-cam__halo { animation: fx-cam-a 2.4s linear infinite; }
+.fx-camara--a .fx-cam__flash { animation: fx-cam-a-flash 2.4s linear infinite; }
+.fx-camara--a .fx-cam__cover { animation: fx-cam-a-cover 2.4s linear infinite; }
+.fx-camara--b .fx-cam__halo { animation: fx-cam-b 3.4s linear infinite; }
+.fx-camara--b .fx-cam__flash { animation: fx-cam-b-flash 3.4s linear infinite; }
+.fx-camara--b .fx-cam__cover { animation: fx-cam-b-cover 3.4s linear infinite; }
 @keyframes fx-cam-a {
-    0%   { opacity: 1; }
-    50%  { opacity: 0; }
+    0%    { opacity: 1; transform: scale(1.25); }
+    5%    { opacity: .9; transform: scale(1); }
+    48%   { opacity: .9; transform: scale(1); }
+    50%   { opacity: 0; transform: scale(.9); }
+    100%  { opacity: 0; transform: scale(.9); }
+}
+@keyframes fx-cam-a-flash {
+    0%    { opacity: 1; transform: scale(.8); }
+    7%    { opacity: 0; transform: scale(1.8); }
+    100%  { opacity: 0; transform: scale(1.8); }
 }
 @keyframes fx-cam-a-cover {
-    0%   { opacity: 0; }
-    50%  { opacity: .9; }
+    0%, 49%   { opacity: 0; }
+    50%, 99%  { opacity: .95; }
+    100%      { opacity: 0; }
 }
 @keyframes fx-cam-b {
-    0%   { opacity: 1; }
-    6%   { opacity: 0; }
-    12%  { opacity: 1; }
-    18%  { opacity: 0; }
+    0%    { opacity: 1; transform: scale(1.25); }
+    3%    { opacity: .9; transform: scale(1); }
+    8%    { opacity: .9; transform: scale(1); }
+    9%    { opacity: 0; transform: scale(.9); }
+    14%   { opacity: 0; transform: scale(.9); }
+    15%   { opacity: 1; transform: scale(1.25); }
+    18%   { opacity: .9; transform: scale(1); }
+    22%   { opacity: .9; transform: scale(1); }
+    23%   { opacity: 0; transform: scale(.9); }
+    100%  { opacity: 0; transform: scale(.9); }
+}
+@keyframes fx-cam-b-flash {
+    0%    { opacity: 1; transform: scale(.8); }
+    5%    { opacity: 0; transform: scale(1.8); }
+    14.9% { opacity: 0; transform: scale(.8); }
+    15%   { opacity: 1; transform: scale(.8); }
+    20%   { opacity: 0; transform: scale(1.8); }
+    100%  { opacity: 0; transform: scale(1.8); }
 }
 @keyframes fx-cam-b-cover {
-    0%   { opacity: 0; }
-    6%   { opacity: .9; }
-    12%  { opacity: 0; }
-    18%  { opacity: .9; }
+    0%, 8%      { opacity: 0; }
+    9%, 14%     { opacity: .95; }
+    15%, 22%    { opacity: 0; }
+    23%, 99%    { opacity: .95; }
+    100%        { opacity: 0; }
 }
 
 /* ---------- 4. Estática de los monitores ---------- */
 .fx-mon {
     overflow: hidden;
-    opacity: .5;
+    opacity: .88;
 }
 .fx-mon__canvas {
     position: absolute;
@@ -176,6 +230,21 @@
     width: 100%;
     height: 100%;
     image-rendering: pixelated;
+}
+/* Luz fría que la pantalla tira alrededor, titilando. */
+.fx-mon__spill {
+    background: radial-gradient(closest-side, rgba(200, 215, 235, .4), rgba(170, 185, 210, .12) 50%, rgba(170, 185, 210, 0) 100%);
+    mix-blend-mode: screen;
+    animation: fx-mon-spill .9s steps(1, end) infinite;
+}
+@keyframes fx-mon-spill {
+    0%   { opacity: .75; }
+    17%  { opacity: 1; }
+    29%  { opacity: .55; }
+    46%  { opacity: .9; }
+    61%  { opacity: .35; }
+    78%  { opacity: 1; }
+    90%  { opacity: .6; }
 }
 /* B: textura de ruido que salta de lugar (steps) + banda clara que baja. */
 .fx-mon__noise {
@@ -201,9 +270,9 @@
     left: 0;
     top: 0;
     width: 100%;
-    height: 28%;
-    background: linear-gradient(to bottom, rgba(255, 245, 235, 0), rgba(255, 245, 235, .35) 50%, rgba(255, 245, 235, 0));
-    animation: fx-mon-band 2.8s linear infinite;
+    height: 30%;
+    background: linear-gradient(to bottom, rgba(255, 245, 235, 0), rgba(255, 245, 235, .6) 50%, rgba(255, 245, 235, 0));
+    animation: fx-mon-band 2.4s linear infinite;
 }
 @keyframes fx-mon-band {
     from { transform: translateY(-100%); }
@@ -211,23 +280,25 @@
 }
 
 /* ---------- 5. Niebla baja ---------- */
+/* Gris frío con tinte rojizo que se SUMA a la imagen (screen): se ve sobre el piso negro. */
 .fx-niebla.fx-fog {
     inset: auto;
     left: 0;
-    top: 56%;
+    top: 50%;
     width: 100%;
-    height: 44%;
+    height: 50%;
     overflow: hidden;
+    mix-blend-mode: screen;
     /* Se esfuma hacia arriba. */
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
-    mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 34%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 34%);
 }
-/* Deja despejado el círculo del centro del piso (donde va el maniquí). */
+/* El círculo del centro del piso (donde va el maniquí) queda casi despejado. */
 .fx-fog__hole {
     position: absolute;
     inset: 0;
-    -webkit-mask-image: radial-gradient(ellipse 30% 34% at 50% 46%, transparent 62%, #000 100%);
-    mask-image: radial-gradient(ellipse 30% 34% at 50% 46%, transparent 62%, #000 100%);
+    -webkit-mask-image: radial-gradient(ellipse 29% 32% at 50% 54%, rgba(0, 0, 0, .1) 58%, #000 100%);
+    mask-image: radial-gradient(ellipse 29% 32% at 50% 54%, rgba(0, 0, 0, .1) 58%, #000 100%);
 }
 .fx-fog__layer {
     position: absolute;
@@ -239,35 +310,36 @@
     background-size: 50% 100%;
     will-change: transform;
 }
-/* A: manchas difusas. */
+/* A: manchas claras sueltas que cruzan el piso. */
 .fx-niebla--a .fx-fog__layer--1 {
     background-image:
-        radial-gradient(ellipse 18% 30% at 12% 70%, rgba(150, 95, 100, .26), rgba(150, 95, 100, 0) 100%),
-        radial-gradient(ellipse 22% 26% at 40% 82%, rgba(150, 95, 100, .22), rgba(150, 95, 100, 0) 100%),
-        radial-gradient(ellipse 16% 24% at 68% 66%, rgba(150, 95, 100, .2), rgba(150, 95, 100, 0) 100%),
-        radial-gradient(ellipse 20% 30% at 90% 85%, rgba(150, 95, 100, .24), rgba(150, 95, 100, 0) 100%);
-    animation: fx-fog-left 75s linear infinite;
+        radial-gradient(ellipse 13% 26% at 10% 72%, rgba(186, 172, 182, .62), rgba(186, 172, 182, 0) 100%),
+        radial-gradient(ellipse 15% 22% at 36% 86%, rgba(186, 172, 182, .55), rgba(186, 172, 182, 0) 100%),
+        radial-gradient(ellipse 11% 20% at 62% 66%, rgba(186, 172, 182, .5), rgba(186, 172, 182, 0) 100%),
+        radial-gradient(ellipse 14% 26% at 86% 84%, rgba(186, 172, 182, .6), rgba(186, 172, 182, 0) 100%);
+    animation: fx-fog-left 34s linear infinite;
 }
 .fx-niebla--a .fx-fog__layer--2 {
     background-image:
-        radial-gradient(ellipse 24% 28% at 25% 88%, rgba(150, 95, 100, .21), rgba(150, 95, 100, 0) 100%),
-        radial-gradient(ellipse 18% 22% at 55% 72%, rgba(150, 95, 100, .16), rgba(150, 95, 100, 0) 100%),
-        radial-gradient(ellipse 22% 30% at 82% 78%, rgba(150, 95, 100, .2), rgba(150, 95, 100, 0) 100%);
-    animation: fx-fog-right 95s linear infinite;
+        radial-gradient(ellipse 16% 24% at 22% 90%, rgba(176, 160, 172, .5), rgba(176, 160, 172, 0) 100%),
+        radial-gradient(ellipse 12% 20% at 52% 74%, rgba(176, 160, 172, .42), rgba(176, 160, 172, 0) 100%),
+        radial-gradient(ellipse 15% 24% at 78% 70%, rgba(176, 160, 172, .5), rgba(176, 160, 172, 0) 100%);
+    animation: fx-fog-right 42s linear infinite;
 }
-/* B y C: textura de humo generada una vez en JS. */
-.fx-niebla--b .fx-fog__layer--1 { opacity: .5; animation: fx-fog-left 80s linear infinite; }
-.fx-niebla--b .fx-fog__layer--2 { opacity: .35; background-position: 37% 0; animation: fx-fog-right 120s linear infinite; }
-.fx-niebla--c .fx-fog__layer--1 { opacity: .6; top: 22%; height: 78%; animation: fx-fog-left 70s linear infinite; }
-.fx-niebla--c .fx-fog__layer--2 { opacity: .45; top: 30%; height: 70%; background-position: 61% 0; animation: fx-fog-right 100s linear infinite; }
-/* C: banco de niebla quieto pegado al piso y a los costados. */
+/* B: humo en jirones (textura generada una vez en JS), dos capas en sentidos opuestos. */
+.fx-niebla--b .fx-fog__layer--1 { opacity: .95; animation: fx-fog-left 36s linear infinite; }
+.fx-niebla--b .fx-fog__layer--2 { opacity: .75; top: 12%; background-position: 37% 0; animation: fx-fog-right 30s linear infinite; }
+/* C: banco espeso pegado al piso y a los costados, más una capa de humo extra. */
+.fx-niebla--c .fx-fog__layer--1 { opacity: 1; top: 18%; height: 82%; animation: fx-fog-left 40s linear infinite; }
+.fx-niebla--c .fx-fog__layer--2 { opacity: .9; top: 30%; height: 70%; background-position: 61% 0; animation: fx-fog-right 32s linear infinite; }
+.fx-niebla--c .fx-fog__layer--3 { opacity: .8; top: 46%; height: 54%; background-position: 13% 0; animation: fx-fog-left 45s linear infinite; }
 .fx-fog__ground {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse 28% 70% at 0% 75%, rgba(115, 68, 74, .22), rgba(115, 68, 74, 0) 100%),
-        radial-gradient(ellipse 28% 70% at 100% 75%, rgba(115, 68, 74, .22), rgba(115, 68, 74, 0) 100%),
-        linear-gradient(to top, rgba(110, 64, 70, .18), rgba(110, 64, 70, 0) 40%);
+        radial-gradient(ellipse 30% 75% at 0% 78%, rgba(176, 160, 170, .55), rgba(176, 160, 170, 0) 100%),
+        radial-gradient(ellipse 30% 75% at 100% 78%, rgba(176, 160, 170, .55), rgba(176, 160, 170, 0) 100%),
+        linear-gradient(to top, rgba(170, 155, 165, .5), rgba(170, 155, 165, 0) 45%);
 }
 @keyframes fx-fog-left {
     from { transform: translate3d(0, 0, 0); }
@@ -280,34 +352,36 @@
 
 /* ---------- 6. Chispas y gotas ---------- */
 .fx-spark {
-    width: .16%;
+    width: .3%;
     aspect-ratio: 1;
-    margin: -.08% 0 0 -.08%;
+    margin: -.15% 0 0 -.15%;
     border-radius: 50%;
-    background: #fff2c8;
-    box-shadow: 0 0 3px 1px rgba(255, 170, 60, .9), 0 0 8px 2px rgba(255, 80, 20, .5);
+    background: #fff6d8;
+    box-shadow: 0 0 4px 1px rgba(255, 190, 80, 1), 0 0 12px 3px rgba(255, 90, 20, .7);
 }
 .fx-spark-flash {
-    width: 2.2%;
+    width: 4.5%;
     aspect-ratio: 1;
     border-radius: 50%;
-    background: radial-gradient(closest-side, rgba(255, 235, 180, .9), rgba(255, 140, 40, .35) 40%, rgba(255, 100, 20, 0) 100%);
+    background: radial-gradient(closest-side, rgba(255, 245, 210, 1), rgba(255, 160, 50, .5) 30%, rgba(255, 100, 20, 0) 100%);
     mix-blend-mode: screen;
     opacity: 0;
 }
 .fx-drop {
-    width: .14%;
+    width: .36%;
     aspect-ratio: 1 / 1.7;
     border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    background: radial-gradient(circle at 35% 35%, rgba(255, 170, 160, .9), rgba(170, 20, 25, .9) 60%);
+    background: radial-gradient(circle at 35% 35%, rgba(255, 210, 200, 1), rgba(220, 30, 30, 1) 55%, rgba(140, 10, 15, 1));
+    box-shadow: 0 0 6px 1px rgba(255, 50, 40, .7);
     transform-origin: 50% 0;
     opacity: 0;
 }
 .fx-ripple {
-    width: 1.1%;
+    width: 3.2%;
     aspect-ratio: 4 / 1;
     border-radius: 50%;
-    border: 1px solid rgba(255, 90, 80, .7);
+    border: 2px solid rgba(255, 120, 105, .9);
+    box-shadow: 0 0 6px rgba(255, 60, 40, .6);
     opacity: 0;
 }
 
@@ -319,7 +393,7 @@
     overflow: hidden;
 }
 .fx-eye {
-    opacity: .58;
+    opacity: .95;
 }
 .fx-eye svg {
     display: block;
@@ -341,9 +415,187 @@
     --fx-suit: rgba(22, 7, 9, .85);
 }
 
+/* ---------- 9 y 10. Copias realzadas de la imagen (enredaderas y círculo) ---------- */
+.fx-copy {
+    overflow: hidden;
+    mix-blend-mode: screen;
+    opacity: 0;
+}
+.fx-copy__img {
+    position: absolute;
+    background-size: 100% 100%;
+    /* Estático: realza los rojos para que, sumados, las venas y líneas "se enciendan". */
+    filter: saturate(1.6) brightness(1.7) contrast(1.35);
+}
+/* Enredaderas: máscaras con la forma de la masa de venas. */
+.fx-veins--left {
+    -webkit-mask-image:
+        radial-gradient(ellipse 42% 20% at 22% 12%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 26% 16% at 30% 40%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 21% 13% at 41% 62%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 26% 12% at 70% 80%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 22% 9% at 86% 92%, #000 30%, transparent 100%);
+    mask-image:
+        radial-gradient(ellipse 42% 20% at 22% 12%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 26% 16% at 30% 40%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 21% 13% at 41% 62%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 26% 12% at 70% 80%, #000 35%, transparent 100%),
+        radial-gradient(ellipse 22% 9% at 86% 92%, #000 30%, transparent 100%);
+}
+.fx-veins--right {
+    -webkit-mask-image: radial-gradient(ellipse 50% 42% at 42% 62%, #000 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 42% at 42% 62%, #000 40%, transparent 100%);
+}
+.fx-venas--a .fx-veins { animation: fx-veins-pulse 4.2s ease-in-out infinite; }
+.fx-venas--b .fx-veins { animation: fx-veins-beat 1.6s ease-out infinite; }
+@keyframes fx-veins-pulse {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: .95; }
+}
+/* Latido doble, como un corazón: pum-pum y pausa. */
+@keyframes fx-veins-beat {
+    0%   { opacity: 0; }
+    8%   { opacity: .95; }
+    18%  { opacity: .25; }
+    27%  { opacity: .85; }
+    50%  { opacity: 0; }
+    100% { opacity: 0; }
+}
+/* Círculo de símbolos. */
+.fx-circle {
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 72%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 72%, transparent 100%);
+}
+.fx-circulo--a .fx-circle { animation: fx-circle-breathe 6s ease-in-out infinite; }
+/* B: las líneas quedan apenas encendidas de fondo y el haz las recorre. */
+.fx-circulo--b .fx-circle { opacity: .4; }
+@keyframes fx-circle-breathe {
+    0%, 100% { opacity: .05; }
+    50%      { opacity: .9; }
+}
+/* B: haz de luz que gira. El cuadrado se aplasta (scaleY) para seguir la perspectiva del piso.
+ * La ventana recorta el haz a la elipse del círculo con una máscara quieta. */
+.fx-sweep {
+    overflow: hidden;
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 70%, transparent 100%);
+}
+.fx-circle__wrap {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 96%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%) scaleY(.15);
+}
+.fx-circle__rotor {
+    position: absolute;
+    inset: 0;
+    /* Estela que se desvanece hacia atrás y un frente más brillante. Sin negro: el resto es transparente. */
+    background: conic-gradient(from 0deg,
+        rgba(255, 40, 20, 0) 0deg,
+        rgba(255, 40, 20, 0) 250deg,
+        rgba(255, 45, 25, .12) 300deg,
+        rgba(255, 60, 35, .32) 340deg,
+        rgba(255, 130, 90, .55) 357deg,
+        rgba(255, 40, 20, 0) 360deg);
+    animation: fx-circle-sweep 5s linear infinite;
+}
+@keyframes fx-circle-sweep {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 /* Con "reducir movimiento" todo queda quieto (jpex.css ya corta las animaciones;
  * acá se fija un estado estático visible). */
 @media (prefers-reduced-motion: reduce) {
-    .fx-tube__glow { opacity: .5; }
-    .fx-lamp__halo, .fx-lamp__wash, .fx-lamp__side, .fx-cam__halo { opacity: .7; }
+    .fx-tube__glow { opacity: .55; }
+    .fx-lamp__halo, .fx-lamp__wash, .fx-lamp__side, .fx-cam__halo { opacity: .8; }
+    .fx-veins, .fx-circle { opacity: .5; }
+}
+
+/* ---------- 11. Bicho (ciempiés y larva) ----------
+ * Cada segmento se ubica con transform desde JS. Los tamaños van en % del escenario,
+ * así el bicho escala con la pantalla. Las patas son ::before y se mueven en onda. */
+.fx-bug {
+    position: absolute;
+    inset: 0;
+}
+.fx-bug__seg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    will-change: transform;
+}
+/* Ciempiés: placas más anchas que largas, encimadas, de quitina marrón rojiza con brillo. */
+.fx-bug--centi .fx-bug__seg {
+    width: .5%;
+    aspect-ratio: .62;
+    border-radius: 38% 52% 52% 38% / 50%;
+    background:
+        radial-gradient(ellipse 45% 30% at 62% 32%, rgba(255, 196, 140, .75), rgba(255, 170, 110, 0) 100%),
+        radial-gradient(ellipse 75% 70% at 55% 50%, #7a3218 0%, #4a1a0b 55%, #1d0904 100%);
+    box-shadow: -1px 0 0 rgba(10, 3, 1, .9);
+}
+/* Patas: un par por placa, finas y color ámbar, que se mueven en onda a lo largo del cuerpo. */
+.fx-bug--centi .fx-bug__seg::before {
+    content: '';
+    position: absolute;
+    left: 40%;
+    top: -62%;
+    width: 11%;
+    height: 224%;
+    border-radius: 40%;
+    background: linear-gradient(to bottom, #e3a85c, #8a4a20 26%, transparent 34%, transparent 66%, #8a4a20 74%, #e3a85c);
+    transform: rotate(-24deg);
+    animation: fx-bug-leg .18s ease-in-out infinite alternate;
+    animation-delay: calc(var(--i) * -.04s);
+}
+.fx-bug--centi .fx-bug__seg--head {
+    border-radius: 40% 70% 70% 40% / 50%;
+    background:
+        radial-gradient(ellipse 40% 30% at 66% 34%, rgba(255, 205, 150, .8), rgba(255, 170, 110, 0) 100%),
+        radial-gradient(ellipse 75% 70% at 60% 50%, #5a200c 0%, #2a0c05 70%, #120402 100%);
+}
+.fx-bug--centi .fx-bug__seg--head::before { display: none; }
+/* Antenas: dos líneas finas en V que salen hacia adelante y se mueven nerviosas. */
+.fx-bug--centi .fx-bug__seg--head::after {
+    content: '';
+    position: absolute;
+    left: 82%;
+    top: -30%;
+    width: 230%;
+    height: 160%;
+    background:
+        linear-gradient(to top right, transparent 46%, rgba(230, 170, 100, .9) 48%, rgba(230, 170, 100, .9) 52%, transparent 54%) top / 100% 50% no-repeat,
+        linear-gradient(to bottom right, transparent 46%, rgba(230, 170, 100, .9) 48%, rgba(230, 170, 100, .9) 52%, transparent 54%) bottom / 100% 50% no-repeat;
+    transform-origin: 0 50%;
+    animation: fx-bug-antenna .7s ease-in-out infinite alternate;
+}
+.fx-bug.is-still .fx-bug__seg::before { animation-play-state: paused; }
+.fx-bug.is-still .fx-bug__seg--head::after { animation-duration: .16s; }
+@keyframes fx-bug-leg {
+    from { transform: rotate(-24deg); }
+    to   { transform: rotate(24deg); }
+}
+@keyframes fx-bug-antenna {
+    from { transform: rotate(-8deg) scaleY(.8); }
+    to   { transform: rotate(7deg) scaleY(1.15); }
+}
+/* Larva: pálida, húmeda y gorda, sin patas; anillos encimados. */
+.fx-bug--larva .fx-bug__seg {
+    width: .8%;
+    aspect-ratio: .72;
+    border-radius: 45%;
+    background:
+        radial-gradient(ellipse 40% 30% at 55% 30%, rgba(255, 255, 245, .85), rgba(255, 250, 235, 0) 100%),
+        radial-gradient(ellipse 70% 70% at 50% 50%, #e9dcc4 0%, #c4a986 55%, #7d6047 85%, #3a271b 100%);
+    box-shadow: -1px 0 1px rgba(60, 35, 20, .6);
+}
+.fx-bug--larva .fx-bug__seg--head {
+    background:
+        radial-gradient(ellipse 30% 30% at 75% 50%, #3a1c10, rgba(58, 28, 16, 0) 100%),
+        radial-gradient(ellipse 70% 70% at 50% 50%, #f1e5cf 0%, #c9ad89 60%, #6d523c 100%);
 }
