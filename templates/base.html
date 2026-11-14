@@ -13,10 +13,109 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100 {% block body_class %}{% endblock %}">
+    <!-- Barra Superior de Anuncios JPEX -->
+    <div class="bg-dark text-white text-center py-2 px-3 small" style="letter-spacing: 1px; font-size: 0.78rem;">
+        <span class="fw-bold">🔥 15% OFF ABONANDO POR TRANSFERENCIA</span>
+        <span class="mx-2 d-none d-md-inline">|</span>
+        <span class="d-none d-md-inline">📦 ENVÍOS A TODO EL PAÍS</span>
+        <span class="mx-2">|</span>
+        <a href="{% url 'lab' %}" class="text-white text-decoration-underline fw-bold">
+            🧪 PROBATE LA ROPA CON IA EN JPEX LAB
+        </a>
+    </div>
 
     <!-- Navbar -->
     {% with url_name=request.resolver_match.url_name %}
     <nav class="navbar navbar-expand-lg jpx-nav sticky-top py-3" data-bs-theme="dark">
+        <!-- Buscador Predictivo en Vivo JPEX -->
+<div class="position-relative ms-lg-3 my-2 my-lg-0" style="min-width: 270px;">
+    <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white border-dark rounded-0">🔍</span>
+        <input type="text"
+               id="jpexLiveSearchInput"
+               class="form-control border-dark rounded-0"
+               placeholder="Buscar remera, buzo, banda..."
+               autocomplete="off">
+    </div>
+
+    <!-- Contenedor flotante donde aparecen los resultados en vivo -->
+    <div id="jpexLiveSearchResults"
+         class="position-absolute bg-white border border-dark w-100 shadow-lg d-none"
+         style="top: 100%; left: 0; z-index: 2000; max-height: 360px; overflow-y: auto;">
+    </div>
+</div>
+
+<script>
+(function() {
+    const searchInput = document.getElementById('jpexLiveSearchInput');
+    const resultsBox = document.getElementById('jpexLiveSearchResults');
+    let debounceTimer = null;
+
+    if (!searchInput || !resultsBox) return;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length < 2) {
+            resultsBox.classList.add('d-none');
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        // Esperamos 250ms después de la última tecla (Debounce)
+        debounceTimer = setTimeout(() => {
+            fetch(`{% url 'live_search_api' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsBox.innerHTML = '';
+
+                    if (!data.results || data.results.length === 0) {
+                        resultsBox.innerHTML = `
+                            <div class="p-3 text-muted small text-center">
+                                No encontramos prendas con "${query}"
+                            </div>`;
+                        resultsBox.classList.remove('d-none');
+                        return;
+                    }
+
+                    data.results.forEach(item => {
+                        const imgHtml = item.image_url
+                            ? `<img src="${item.image_url}" alt="${item.name}" style="width: 48px; height: 48px; object-fit: contain; background: #fff;" class="border me-3 p-1">`
+                            : `<div style="width: 48px; height: 48px;" class="border me-3 d-flex align-items-center justify-content-center small text-muted">—</div>`;
+
+                        const row = document.createElement('div');
+                        row.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+                        row.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                ${imgHtml}
+                                <div>
+                                    <div class="fw-bold small text-uppercase text-dark">${item.name}</div>
+                                    <div class="text-muted small">$${item.price}</div>
+                                </div>
+                            </div>
+                            <a href="${item.lab_url}" class="btn btn-dark btn-sm rounded-0 px-2 py-1" style="font-size: 0.72rem;">
+                                Probar IA
+                            </a>
+                        `;
+                        resultsBox.appendChild(row);
+                    });
+
+                    resultsBox.classList.remove('d-none');
+                })
+                .catch(err => console.error('Error en buscador:', err));
+        }, 250);
+    });
+
+    // Cerrar el desplegable al hacer clic afuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+            resultsBox.classList.add('d-none');
+        }
+    });
+})();
+</script>
+
         <div class="container">
             <a class="navbar-brand jpx-logo" href="{% url 'products:home' %}">JPEX<span>.</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú">
@@ -31,7 +130,7 @@
                         <a class="nav-link {% if url_name == 'catalog' or url_name == 'catalog_by_category' %}active{% endif %}" {% if url_name == 'catalog' %}aria-current="page"{% endif %} href="{% url 'products:catalog' %}">Catálogo</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.namespace == 'laboratory' %}active{% endif %}" {% if url_name == 'lab_home' %}aria-current="page"{% endif %} href="{% url 'laboratory:lab_home' %}">Lab</a>
+                        <a class="nav-link {% if url_name == 'lab' or url_name == 'lab_product' or url_name == 'lab_sketches' %}active{% endif %}" {% if url_name == 'lab' %}aria-current="page"{% endif %} href="{% url 'lab' %}">Lab</a>
                     </li>
                 </ul>
             </div>
@@ -80,5 +179,194 @@
             items.forEach(function (el) { observer.observe(el); });
         })();
     </script>
+    <!-- PANEL LATERAL DEL CARRITO (OFFCANVAS) -->
+<div class="offcanvas offcanvas-end border-start border-dark" tabindex="-1" id="jpexCartDrawer" aria-labelledby="jpexCartDrawerLabel">
+    <div class="offcanvas-header bg-dark text-white rounded-0">
+        <h5 class="offcanvas-title fw-bold text-uppercase" id="jpexCartDrawerLabel" style="letter-spacing: 1px;">
+            🛒 Tu Pedido JPEX
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column justify-content-between p-3">
+        <!-- Lista de productos agregados -->
+        <div id="jpexCartItemsContainer" class="overflow-auto pe-1" style="max-height: 62vh;">
+            <div class="text-center text-muted py-5 small">
+                Tu carrito está vacío. Agregá prendas desde el catálogo o desde JPEX LAB.
+            </div>
+        </div>
+
+        <!-- Pie del carrito con Total y Botón de WhatsApp -->
+        <div class="border-top border-dark pt-3 mt-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-uppercase small">Total Estimado:</span>
+                <span id="jpexCartTotalAmount" class="fw-bold fs-4">$0</span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="#" id="jpexCartWhatsappBtn" target="_blank" rel="noopener"
+                   class="btn btn-success rounded-0 py-3 fw-bold text-uppercase">
+                    📲 Enviar Pedido por WhatsApp
+                </a>
+                <button type="button" id="jpexClearCartBtn"
+                        class="btn btn-outline-dark btn-sm rounded-0 text-uppercase fw-bold">
+                    Vaciar Carrito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LÓGICA GLOBAL DEL CARRITO JPEX -->
+<script>
+(function() {
+    // Cambiá este número por tu WhatsApp real con código de país (sin + ni espacios)
+    const JPEX_WHATSAPP_PHONE = "5491100000000";
+    const STORAGE_KEY = "jpex_cart_v1";
+
+    function getCart() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveCart(cart) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+        renderCart();
+    }
+
+    function formatPrice(num) {
+        return Number(num || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function addItem(item) {
+        const cart = getCart();
+        const sizeKey = (item.size || 'Único').trim();
+        const colorKey = (item.color || '').trim();
+        const uniqueKey = `${item.id}_${sizeKey}_${colorKey}`;
+
+        const existing = cart.find(i => i.key === uniqueKey);
+        if (existing) {
+            existing.qty += (item.qty || 1);
+        } else {
+            cart.push({
+                key: uniqueKey,
+                id: item.id,
+                name: item.name,
+                price: parseFloat(item.price) || 0,
+                size: sizeKey,
+                color: colorKey,
+                image: item.image || '',
+                qty: item.qty || 1
+            });
+        }
+        saveCart(cart);
+
+        // Abrir el carrito lateral automáticamente al agregar una prenda
+        const drawerEl = document.getElementById('jpexCartDrawer');
+        if (drawerEl && window.bootstrap) {
+            const instance = bootstrap.Offcanvas.getOrCreateInstance(drawerEl);
+            instance.show();
+        }
+    }
+
+    function updateQty(key, delta) {
+        let cart = getCart();
+        const item = cart.find(i => i.key === key);
+        if (!item) return;
+        item.qty += delta;
+        if (item.qty <= 0) {
+            cart = cart.filter(i => i.key !== key);
+        }
+        saveCart(cart);
+    }
+
+    function clearCart() {
+        saveCart([]);
+    }
+
+    function renderCart() {
+        const cart = getCart();
+        const badge = document.getElementById('jpexCartCountBadge');
+        const container = document.getElementById('jpexCartItemsContainer');
+        const totalEl = document.getElementById('jpexCartTotalAmount');
+        const wspBtn = document.getElementById('jpexCartWhatsappBtn');
+
+        const totalQty = cart.reduce((acc, item) => acc + item.qty, 0);
+        const totalPrice = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+        if (badge) badge.innerText = totalQty;
+        if (totalEl) totalEl.innerText = `$${formatPrice(totalPrice)}`;
+
+        if (!container) return;
+
+        if (cart.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5 small">
+                    Tu carrito está vacío.<br>Agregá prendas desde el catálogo o desde JPEX LAB.
+                </div>`;
+            if (wspBtn) {
+                wspBtn.classList.add('disabled');
+                wspBtn.href = '#';
+            }
+            return;
+        }
+
+        container.innerHTML = cart.map(item => `
+            <div class="d-flex align-items-center justify-content-between border-bottom py-3">
+                <div class="d-flex align-items-center">
+                    ${item.image
+                        ? `<img src="${item.image}" alt="${item.name}" style="width:56px;height:56px;object-fit:contain;background:#fff;" class="border border-dark me-2 p-1">`
+                        : `<div style="width:56px;height:56px;" class="border me-2 bg-light d-flex align-items-center justify-content-center small fw-bold">JPEX</div>`
+                    }
+                    <div>
+                        <div class="fw-bold small text-uppercase">${item.name}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">
+                            Talle: <strong>${item.size}</strong>
+                            ${item.color ? ` | Color: <strong>${item.color}</strong>` : ''}
+                        </div>
+                        <div class="fw-bold small mt-1">$${formatPrice(item.price * item.qty)}</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 px-2 py-0"
+                            onclick="window.jpexCart.updateQty('${item.key}', -1)">-</button>
+                    <span class="px-2 small fw-bold">${item.qty}</span>
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 px-2 py-0"
+                            onclick="window.jpexCart.updateQty('${item.key}', 1)">+</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Armar el mensaje de WhatsApp con todas las prendas y el total
+        let lines = ["¡Hola JPEX! Quiero realizar el siguiente pedido:", ""];
+        cart.forEach(item => {
+            const colorTxt = item.color ? ` | Color: ${item.color}` : '';
+            lines.push(`• ${item.qty}x *${item.name}* (Talle: ${item.size}${colorTxt}) - $${formatPrice(item.price * item.qty)}`);
+        });
+        lines.push("");
+        lines.push(`*Total estimado: $${formatPrice(totalPrice)}*`);
+        lines.push("¿Tienen stock disponible para coordinar el pago y envío?");
+
+        if (wspBtn) {
+            wspBtn.classList.remove('disabled');
+            wspBtn.href = `https://wa.me/${JPEX_WHATSAPP_PHONE}?text=${encodeURIComponent(lines.join('\n'))}`;
+        }
+    }
+
+    document.getElementById('jpexClearCartBtn')?.addEventListener('click', clearCart);
+
+    window.jpexCart = {
+        addItem: addItem,
+        updateQty: updateQty,
+        clearCart: clearCart,
+        renderCart: renderCart
+    };
+
+    window.addEventListener('DOMContentLoaded', renderCart);
+    renderCart();
+})();
+</script>
 </body>
 </html>

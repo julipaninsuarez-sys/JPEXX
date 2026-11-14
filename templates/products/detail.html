@@ -1,89 +1,190 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}JPEX Store — {{ product.name }}{% endblock %}
 
 {% block content %}
-<div class="container py-4 py-md-5">
-    <nav class="jpx-crumbs" aria-label="Ubicación">
-        <a href="{% url 'products:catalog' %}">Catálogo</a>
-        <span aria-hidden="true">/</span>
-        <a href="{% url 'products:catalog_by_category' product.category.slug %}">{{ product.category.name }}</a>
+<div class="container py-5">
+    <!-- Navegación Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <a href="{% url 'products:catalog' %}" class="text-decoration-none text-muted fw-bold">CATÁLOGO</a>
+        <span class="mx-2 text-muted">/</span>
+        <a href="{% url 'products:catalog_by_category' product.category.slug %}" class="text-decoration-none text-muted fw-bold text-uppercase">{{ product.category.name }}</a>
     </nav>
 
-    <div class="row g-5 align-items-start">
-        <!-- Columna izquierda: Imagen de la prenda -->
-        <div class="col-12 col-md-6">
-            <div class="jpx-detail-sticky">
-                <div class="jpx-detail-photo me-2">
-                    <div class="jpx-stage">
-                        {% if product.main_image %}
-                        <img src="{{ product.stage_image_url }}" alt="{{ product.name }}">
-                        {% else %}
-                        <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
-                        {% endif %}
+    <div class="row g-5">
+        <!-- Columna Izquierda: Imagen -->
+        <div class="col-md-6">
+            <div class="border border-dark bg-light position-relative">
+                {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid w-100" style="object-fit: cover;">
+                {% else %}
+                    <div class="d-flex align-items-center justify-content-center" style="min-height: 500px;">
+                        <span class="text-muted fw-bold">SIN IMAGEN</span>
                     </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Columna derecha: Información del producto y WhatsApp -->
-        <div class="col-12 col-md-6">
-            <span class="jpx-detail-eyebrow">{{ product.category.name }} &bull; {{ product.color }}</span>
-            <h1 class="jpx-detail-name">{{ product.name }}</h1>
-            <p class="jpx-detail-price">${{ product.price|floatformat:"-2" }}</p>
-
-            <!-- Descripción -->
-            <div class="mb-4">
-                <h2 class="jpx-detail-label">Descripción</h2>
-                <p class="jpx-detail-text mb-0">
-                    {{ product.description|default:"Prenda confeccionada con materiales de alta calidad, diseño moderno y calce cómodo para uso diario." }}
-                </p>
+        <!-- Columna Derecha: Info y Selectores -->
+        <div class="col-md-6">
+            <div class="mb-2">
+                <span class="badge bg-dark rounded-0 px-2 py-1 text-uppercase" style="letter-spacing: 1px;">{{ product.category.name }}</span>
+                {% if product.color and not product.colors.all %}
+                    <span class="badge border border-dark text-dark rounded-0 px-2 py-1 text-uppercase">{{ product.color }}</span>
+                {% endif %}
             </div>
+            
+            <h1 class="fw-bold text-uppercase mb-3" style="font-size: 2.5rem; letter-spacing: -1px;">{{ product.name }}</h1>
+            <h3 class="fw-bold mb-4 fs-2">$ {{ product.price|floatformat:"0" }}</h3>
+            
+            <p class="text-muted mb-5 fs-6 lh-lg">
+                {{ product.description|default:"Prenda de diseño exclusivo. Confeccionada con materiales de alta calidad, calce urbano y moderno." }}
+            </p>
 
-            <!-- Talles disponibles -->
-            {% if product.size_list %}
+            <!-- Selector de Colores -->
+            {% if product.colors.all %}
             <div class="mb-4">
-                <h2 class="jpx-detail-label">Talles Disponibles</h2>
-                <div class="d-flex flex-wrap gap-2">
-                    {% for size in product.size_list %}
-                    <span class="jpx-size">{{ size }}</span>
+                <label class="fw-bold text-uppercase small mb-2 d-block">1. Elegí el Color: <span id="colorLabel" class="text-muted fw-normal">Ninguno</span></label>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% for color in product.colors.all %}
+                    <button type="button" 
+                            class="btn color-btn rounded-circle p-0 position-relative" 
+                            style="width: 40px; height: 40px; background-color: {{ color.hex_code }}; border: 2px solid #dee2e6; transition: all 0.2s;"
+                            data-color="{{ color.name }}"
+                            onclick="selectColor(this, '{{ color.name }}')"
+                            title="{{ color.name }}">
+                    </button>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
 
-            <!-- Botón de consulta por WhatsApp -->
-            <div class="d-grid mt-4 pe-2">
-                <a href="https://wa.me/549999999999?text=Hola!%20Quiero%20consultar%20por%20el%20producto:%20{{ product.name|urlencode }}"
-                   target="_blank"
-                   rel="noopener"
-                   class="jpx-btn">
-                    Consultar por WhatsApp
-                </a>
-                <span class="jpx-detail-note">Serás atendido por un asesor de ventas de JPEX.</span>
+            <!-- Selector de Talles -->
+            {% if product.sizes.all %}
+            <div class="mb-4">
+                <label class="fw-bold text-uppercase small mb-2 d-block">2. Elegí el Talle: <span id="sizeLabel" class="text-muted fw-normal">Ninguno</span></label>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% for size in product.sizes.all %}
+                    <button type="button" 
+                            class="btn btn-outline-dark rounded-0 size-btn fw-bold"
+                            style="min-width: 60px; transition: all 0.2s;"
+                            data-size="{{ size.name }}"
+                            onclick="selectSize(this, '{{ size.name }}')">
+                        {{ size.name }}
+                    </button>
+                    {% endfor %}
+                </div>
             </div>
-                <a href="{% url 'laboratory:lab_product' product.id %}" class="btn btn-outline-dark rounded-0 w-100 py-3 mt-2 fw-bold text-uppercase">
-                Probar en JPEX LAB
-                </a>
+            {% endif %}
 
+            <!-- Aviso si intenta agregar al carrito sin elegir talle -->
+            <div id="cartValidationAlert" class="alert alert-warning rounded-0 py-2 small d-none mb-3">
+                Por favor, seleccioná un talle arriba antes de agregar la prenda al carrito.
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="d-grid mt-2 gap-3">
+                <button type="button"
+                        id="addToCartBtn"
+                        onclick="handleAddToCart()"
+                        class="btn btn-dark rounded-0 py-3 fw-bold text-uppercase fs-5">
+                    🛒 Agregar al Carrito
+                </button>
+
+                <a href="#" 
+                   id="whatsappBtn"
+                   target="_blank" 
+                   rel="noopener" 
+                   class="btn btn-success rounded-0 py-3 fw-bold text-uppercase"
+                   data-base-url="https://wa.me/5491100000000?text=Hola!%20Quiero%20consultar%20por:%20{{ product.name|urlencode }}">
+                    📲 Comprar solo esta prenda por WhatsApp
+                </a>
+                
+                <a href="{% url 'lab_product' product.id %}"
+                   id="labBtn"
+                   data-base-lab-url="{% url 'lab_product' product.id %}"
+                   class="btn btn-outline-dark rounded-0 py-3 fw-bold text-uppercase">
+                    🧪 Entrar al Probador con IA (JPEX LAB)
+                </a>
+            </div>
+            <div class="mt-3 text-muted small text-center">
+                Podés sumar varias prendas al carrito y enviar todo tu pedido junto por WhatsApp.
+            </div>
         </div>
     </div>
 </div>
 
-{% if related_products %}
-<!-- Más prendas de la misma categoría -->
-<section class="container mt-4 mb-5">
-    <div class="jpx-section-head">
-        <h2 class="jpx-section-title">También te puede gustar</h2>
-        <a href="{% url 'products:catalog_by_category' product.category.slug %}" class="jpx-link">Ver más {{ product.category.name }} <span>&rarr;</span></a>
-    </div>
-    <div class="row g-3 g-md-4">
-        {% for product in related_products %}
-        <div class="col-6 col-lg-3 reveal">
-            {% include 'products/_card.html' %}
-        </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
+<!-- Script de Lógica para Colores, Talles y Carrito -->
+<script>
+    let selectedColor = "{% if product.color and not product.colors.all %}{{ product.color|escapejs }}{% endif %}";
+    let selectedSize = "";
+    const hasSizes = {% if product.sizes.all %}true{% else %}false{% endif %};
+
+    function selectColor(btn, colorName) {
+        document.querySelectorAll('.color-btn').forEach(b => {
+            b.style.borderColor = '#dee2e6';
+            b.style.transform = 'scale(1)';
+        });
+        btn.style.borderColor = '#000';
+        btn.style.transform = 'scale(1.1)';
+        
+        selectedColor = colorName;
+        document.getElementById('colorLabel').innerText = colorName;
+        updateActionLinks();
+    }
+
+    function selectSize(btn, sizeName) {
+        document.querySelectorAll('.size-btn').forEach(b => {
+            b.classList.remove('bg-dark', 'text-white');
+        });
+        btn.classList.add('bg-dark', 'text-white');
+        
+        selectedSize = sizeName;
+        document.getElementById('sizeLabel').innerText = sizeName;
+        document.getElementById('cartValidationAlert')?.classList.add('d-none');
+        updateActionLinks();
+    }
+
+    function updateActionLinks() {
+        const wpBtn = document.getElementById('whatsappBtn');
+        let baseUrl = wpBtn.getAttribute('data-base-url');
+        
+        let extraText = "";
+        if (selectedColor) extraText += "%20-%20Color:%20" + encodeURIComponent(selectedColor);
+        if (selectedSize) extraText += "%20-%20Talle:%20" + encodeURIComponent(selectedSize);
+        
+        wpBtn.href = baseUrl + extraText;
+
+        const labBtn = document.getElementById('labBtn');
+        if (labBtn) {
+            const baseLabUrl = labBtn.getAttribute('data-base-lab-url');
+            labBtn.href = selectedSize ? `${baseLabUrl}?size=${encodeURIComponent(selectedSize)}` : baseLabUrl;
+        }
+    }
+
+    function handleAddToCart() {
+        if (hasSizes && !selectedSize) {
+            const alertBox = document.getElementById('cartValidationAlert');
+            if (alertBox) alertBox.classList.remove('d-none');
+            return;
+        }
+
+        if (window.jpexCart) {
+            window.jpexCart.addItem({
+                id: "{{ product.id }}",
+                name: "{{ product.name|escapejs }}",
+                price: "{{ product.price|floatformat:'0' }}",
+                size: selectedSize || "Único",
+                color: selectedColor || "",
+                image: "{% if product.image %}{{ product.image.url }}{% endif %}",
+                qty: 1
+            });
+        } else {
+            alert("Para activar el carrito lateral, pegá el Paso 5 de la guía en tu archivo templates/base.html");
+        }
+    }
+
+    updateActionLinks();
+</script>
 {% endblock %}

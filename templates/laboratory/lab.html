@@ -32,11 +32,11 @@
         <div class="container py-4 py-lg-5">
             <div class="text-center mb-5">
                 <span class="badge jpx-lab-badge rounded-0 px-3 py-2 mb-2 text-uppercase" style="letter-spacing: 2px;">
-                    Virtual Try-On + Fit AI
+                    Virtual Try-On Studio 3:4 + Biometric Fit AI
                 </span>
                 <h2 class="jpx-lab-ui__title mt-2" id="labPanelTitle">JPEX LAB</h2>
-                <p class="text-muted mx-auto" style="max-width: 620px;">
-                    Probate nuestras prendas de forma virtual y descubrí cómo te va a quedar cada talle según tus medidas reales.
+                <p class="text-muted mx-auto" style="max-width: 650px;">
+                    Probate nuestras prendas de forma virtual con nuestro motor Multi-IA y descubrí cómo te va a quedar cada talle según la moldería y tela real de cada prenda.
                 </p>
             </div>
 
@@ -44,18 +44,6 @@
                 <div class="col-lg-6">
                     <div class="jpx-lab-card p-4">
                         <h5 class="fw-bold text-uppercase mb-4 border-bottom pb-2">1. Configurá tu prueba</h5>
-
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-uppercase text-muted">Método de obtención de medidas</label>
-                            <div class="btn-group w-100" role="group">
-                                <button type="button" class="btn jpx-lab-btn rounded-0 btn-sm py-2 fw-bold">
-                                    Cargar altura y peso
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary rounded-0 btn-sm py-2" disabled title="Próximamente disponible">
-                                    Sacar medidas por foto (Próximamente)
-                                </button>
-                            </div>
-                        </div>
 
                         <form method="POST" enctype="multipart/form-data" id="labForm">
                             {% csrf_token %}
@@ -65,7 +53,7 @@
                                 <select name="product_id" id="productSelect" class="form-select rounded-0" required>
                                     {% for prod in products %}
                                         <option value="{{ prod.id }}"
-                                                data-img="{{ prod.resolved_image_url|default:'' }}"
+                                                data-img="{% if prod.image %}{{ prod.image.url }}{% else %}{{ prod.resolved_image_url|default:'' }}{% endif %}"
                                                 data-name="{{ prod.name }}"
                                                 {% if selected_product and prod.id == selected_product.id %}selected{% endif %}>
                                             {{ prod.name }} - ${{ prod.price }}
@@ -74,11 +62,15 @@
                                 </select>
                             </div>
 
-                            <div class="d-flex align-items-center p-2 mb-3 jpx-lab-card__sub" id="garmentPreviewBox" {% if not selected_garment_url %}style="display:none !important;"{% endif %}>
-                                <img src="{{ selected_garment_url|default:'' }}" id="garmentPreviewImg" alt="Prenda seleccionada" style="width: 72px; height: 72px; object-fit: contain; background: #fff;" class="me-3 border p-1">
+                            <div class="{% if selected_garment_url or selected_product.image %}d-flex{% else %}d-none{% endif %} align-items-center p-2 mb-3 jpx-lab-card__sub" id="garmentPreviewBox">
+                                <img src="{% if selected_product.image %}{{ selected_product.image.url }}{% else %}{{ selected_garment_url|default:'' }}{% endif %}"
+                                     id="garmentPreviewImg"
+                                     alt="Prenda seleccionada"
+                                     style="width: 80px; height: 80px; object-fit: contain; background: #fff;"
+                                     class="me-3 border p-1">
                                 <div>
                                     <div class="fw-bold text-uppercase small" id="garmentPreviewName">{{ selected_product.name }}</div>
-                                    <div class="text-muted small">Prenda seleccionada para el probador</div>
+                                    <div class="text-muted small">Preprocesamiento automático Studio 3:4 activado</div>
                                 </div>
                             </div>
 
@@ -97,26 +89,41 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small text-uppercase">¿Cómo te gusta que te quede?</label>
-                                <select name="preferred_fit" class="form-select rounded-0">
-                                    <option value="oversize" {% if session_result.preferred_fit == 'oversize' %}selected{% endif %}>
-                                        Suelto / Oversize (Recomendado JPEX)
-                                    </option>
-                                    <option value="regular" {% if session_result.preferred_fit == 'regular' %}selected{% endif %}>
-                                        Clásico / Regular
-                                    </option>
-                                    <option value="ajustado" {% if session_result.preferred_fit == 'ajustado' %}selected{% endif %}>
-                                        Al cuerpo / Ajustado
-                                    </option>
-                                </select>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-7">
+                                    <label class="form-label fw-bold small text-uppercase">¿Cómo te gusta que te quede?</label>
+                                    <select name="preferred_fit" class="form-select rounded-0">
+                                        <option value="oversize" {% if session_result.preferred_fit == 'oversize' %}selected{% endif %}>
+                                            Suelto / Oversize (Recomendado JPEX)
+                                        </option>
+                                        <option value="regular" {% if session_result.preferred_fit == 'regular' %}selected{% endif %}>
+                                            Clásico / Regular
+                                        </option>
+                                        <option value="ajustado" {% if session_result.preferred_fit == 'ajustado' %}selected{% endif %}>
+                                            Al cuerpo / Ajustado
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label fw-bold small text-uppercase">Talle a simular</label>
+                                    <select name="requested_size" class="form-select rounded-0">
+                                        <option value="auto" {% if requested_size == 'auto' %}selected{% endif %}>
+                                            ✨ Automático (Ideal)
+                                        </option>
+                                        {% for s_name in available_size_names %}
+                                            <option value="{{ s_name }}" {% if requested_size == s_name %}selected{% endif %}>
+                                                Probar Talle {{ s_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
 
                             <div class="mb-4">
                                 <label class="form-label fw-bold small text-uppercase">Subí tu foto de frente</label>
                                 <input type="file" name="user_image" class="form-control rounded-0" accept="image/*" required>
                                 <div class="form-text small">
-                                    Consejo: Usá una foto de frente, de la cintura hacia arriba y con buena luz.
+                                    Consejo: Usá una foto de frente, de la cintura hacia arriba, con los brazos relajados y buena luz.
                                 </div>
                             </div>
 
@@ -133,26 +140,70 @@
 
                         {% if session_result %}
                             <div class="jpx-lab-card__sub text-white p-4 mb-4">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-uppercase small" style="letter-spacing: 1px;">Talle Ideal Calculado</span>
-                                    <span class="badge bg-white text-dark rounded-0 fs-5 px-3 py-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                    <div>
+                                        <span class="text-uppercase small d-block opacity-75" style="letter-spacing: 1px;">
+                                            {% if diagnostics.user_forced_size %}Talle Simulado Manualmente{% else %}Talle Ideal Calculado{% endif %}
+                                        </span>
+                                        {% if diagnostics %}
+                                            <span class="badge border border-light text-white rounded-0 mt-1">
+                                                {{ diagnostics.calce_badge }} · {{ diagnostics.fabric_es }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge bg-white text-dark rounded-0 fs-5 px-3 py-2">
                                         TALLE {{ session_result.recommended_size }}
                                     </span>
                                 </div>
-                                <p class="mb-0 small opacity-75">
+                                <p class="mb-0 small opacity-75 mt-2">
                                     {{ session_result.fit_explanation }}
                                 </p>
                             </div>
 
+                            {% if diagnostics.size_comparison %}
+                            <div class="mb-4">
+                                <div class="small fw-bold text-uppercase mb-2">Comparativa Biométrica por Talle ({{ selected_product.name }})</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered small mb-0 text-center align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Talle</th>
+                                                <th>Pecho</th>
+                                                <th>Largo</th>
+                                                <th>Hombros</th>
+                                                <th>Cómo te queda</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in diagnostics.size_comparison %}
+                                            <tr class="{% if row.is_selected %}table-active fw-bold{% endif %}">
+                                                <td>
+                                                    {{ row.size }}
+                                                    {% if row.is_ideal %}
+                                                        <span class="badge bg-success rounded-0 ms-1" style="font-size: 0.65rem;">IDEAL</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ row.chest_cm }} cm</td>
+                                                <td>{{ row.length_cm }} cm</td>
+                                                <td>{{ row.shoulder_cm }}{% if row.shoulder_cm != '-' %} cm{% endif %}</td>
+                                                <td>{{ row.fit_tag }} ({{ row.diff_cm }} cm)</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+
                             {% if session_result.result_image %}
                                 <div class="text-center mb-4">
-                                    <span class="badge bg-success rounded-0 mb-2">Prueba Virtual Generada con IA</span>
+                                    <span class="badge bg-success rounded-0 mb-2">Prueba Virtual Generada con IA (Studio 3:4)</span>
                                     <img src="{{ session_result.result_image.url }}" class="img-fluid border w-100" alt="Resultado JPEX LAB">
                                 </div>
                             {% else %}
                                 {% if ai_error_detail %}
                                 <div class="alert alert-warning rounded-0 small mb-3">
-                                    <strong>Aviso del servidor gratuito de IA:</strong><br>
+                                    <strong>Aviso de los servidores gratuitos de IA:</strong><br>
                                     <code>{{ ai_error_detail }}</code>
                                 </div>
                                 {% endif %}
@@ -172,14 +223,30 @@
                                 </div>
                             {% endif %}
 
-                            <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success rounded-0 w-100 py-3 fw-bold text-uppercase">
-                                Pedir {{ session_result.product.name }} en Talle {{ session_result.recommended_size }} por WhatsApp
-                            </a>
+                            <div class="d-grid gap-2">
+                                <button type="button"
+                                        class="btn jpx-lab-btn rounded-0 w-100 py-3 fw-bold text-uppercase"
+                                        onclick="window.jpexCart && window.jpexCart.addItem({
+                                            id: '{{ session_result.product.id }}',
+                                            name: '{{ session_result.product.name|escapejs }}',
+                                            price: '{{ session_result.product.price|floatformat:0 }}',
+                                            size: '{{ session_result.recommended_size|escapejs }}',
+                                            color: '',
+                                            image: '{% if session_result.product.image %}{{ session_result.product.image.url }}{% else %}{{ selected_garment_url|default:'' }}{% endif %}',
+                                            qty: 1
+                                        })">
+                                    🛒 Agregar {{ session_result.product.name }} (Talle {{ session_result.recommended_size }}) al Carrito
+                                </button>
+
+                                <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success rounded-0 w-100 py-3 fw-bold text-uppercase">
+                                    📲 Pedir solo esta prenda por WhatsApp
+                                </a>
+                            </div>
                         {% else %}
                             <div class="text-center py-5 text-muted">
                                 <p class="fw-bold text-uppercase mb-2">Todavía no generaste tu prueba</p>
                                 <p class="small mb-0">
-                                    Completá tu altura, peso y subí tu foto en el panel izquierdo para ver cómo te queda la prenda y conocer tu talle exacto.
+                                    Completá tu altura, peso, elegí si querés recomendación automática o probar un talle puntual y subí tu foto en el panel izquierdo.
                                 </p>
                             </div>
                         {% endif %}
@@ -210,28 +277,36 @@
     });
 </script>
 <script>
-    // Actualiza la miniatura de la prenda en vivo cuando cambiás el selector
+    // Miniatura de la prenda y aviso al enviar (de Juli).
     const productSelect = document.getElementById('productSelect');
     const previewImg = document.getElementById('garmentPreviewImg');
     const previewName = document.getElementById('garmentPreviewName');
     const previewBox = document.getElementById('garmentPreviewBox');
 
-    productSelect?.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
+    function updateGarmentPreview() {
+        if (!productSelect || productSelect.selectedIndex < 0) return;
+        const selectedOption = productSelect.options[productSelect.selectedIndex];
         const imgUrl = selectedOption.getAttribute('data-img');
         const prodName = selectedOption.getAttribute('data-name');
 
-        if (imgUrl) {
+        if (imgUrl && imgUrl.trim() !== '') {
             previewImg.src = imgUrl;
             previewName.innerText = prodName;
-            previewBox.style.display = 'flex';
+            previewBox.classList.remove('d-none');
+            previewBox.classList.add('d-flex');
+        } else {
+            previewBox.classList.remove('d-flex');
+            previewBox.classList.add('d-none');
         }
-    });
+    }
+
+    productSelect?.addEventListener('change', updateGarmentPreview);
+    window.addEventListener('DOMContentLoaded', updateGarmentPreview);
 
     document.getElementById('labForm')?.addEventListener('submit', function() {
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
-        btn.innerText = 'Generando prueba con IA (15 a 30 seg)...';
+        btn.innerText = 'Procesando en Motor Multi-IA (15 a 25 seg)...';
     });
 
     // Abre y cierra el probador sobre el laboratorio. Con el probador abierto,
