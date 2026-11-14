@@ -17,7 +17,12 @@
     </div>
 
     {# Lo que se ve al entrar: el laboratorio y el acceso al probador. #}
-    <div class="jpx-lab__hud">
+    {# Se puede achicar a una pastilla (labHudPill) para ver el laboratorio limpio. #}
+    <div class="jpx-lab__hud" id="labHud">
+        <button type="button" class="jpx-lab__hud-min" id="labHudMin" aria-controls="labHud"
+                aria-label="Achicar el cartel para ver el laboratorio" title="Achicar">
+            <span aria-hidden="true"></span>
+        </button>
         <p class="jpx-lab__hud-kicker">Virtual Try-On + Fit AI</p>
         <h1 class="jpx-lab__hud-title">JPEX LAB</h1>
         <p class="jpx-lab__hud-text">Probate las prendas de forma virtual y descubrí tu talle según tus medidas.</p>
@@ -25,6 +30,11 @@
             Abrir el probador
         </button>
     </div>
+    <button type="button" class="jpx-lab__hud-pill" id="labHudPill" aria-controls="labHud" aria-expanded="true" tabindex="-1">
+        <span class="jpx-lab__hud-pill-title">JPEX LAB</span>
+        <span class="jpx-lab__hud-pill-plus" aria-hidden="true">+</span>
+        <span class="visually-hidden">Mostrar el cartel del probador</span>
+    </button>
 
     {# El probador (recomendador de talle + prueba con IA). #}
     <div class="jpx-lab-ui" id="labPanel" data-bs-theme="dark" role="region" aria-labelledby="labPanelTitle" {% if not panel_open %}hidden{% endif %}>
@@ -259,21 +269,49 @@
 
 {# El fondo queda quieto (sin lab-pan.js): Francisco eligió no moverlo con el mouse por ahora. #}
 <script src="{% static 'js/lab-fx.js' %}?v=7" defer></script>
+<script src="{% static 'js/lab-swipe.js' %}?v=3" defer></script>
 <script>
-    // Efectos del fondo elegidos en /lab/bocetos/ (2026-11-13).
-    // Tubos C · Lámpara C · Cámara A · Estática B · Niebla C · Chispas A · Ojos C ·
-    // Traje B · Enredaderas A · Círculo A · Bicho apagado.
+    // Efectos del fondo elegidos en /lab/bocetos/: unos para la compu y otros para el celu.
+    // Lo que no está en la lista queda apagado (por ejemplo, el bicho).
     const LAB_EFFECTS = {
-        tubos: 'c', lampara: 'c', camara: 'a', estatica: 'b', niebla: 'c', chispas: 'a',
-        ojos: 'c', traje: 'b', venas: 'a', circulo: 'a'
+        // Compu (2026-11-13): Tubos C · Lámpara C · Cámara A · Estática B · Niebla C ·
+        // Chispas A · Ojos C · Traje B · Enredaderas A · Círculo A.
+        compu: {
+            tubos: 'c', lampara: 'c', camara: 'a', estatica: 'b', niebla: 'c', chispas: 'a',
+            ojos: 'c', traje: 'b', venas: 'a', circulo: 'a'
+        },
+        // Celu (2026-11-14): Tubos A · Lámpara A · Cámara B · Estática A · Niebla A ·
+        // Chispas A · Ojos apagado · Traje A · Enredaderas A · Círculo A.
+        celu: {
+            tubos: 'a', lampara: 'a', camara: 'b', estatica: 'a', niebla: 'a', chispas: 'a',
+            traje: 'a', venas: 'a', circulo: 'a'
+        }
     };
+    // Celu: pantalla angosta (vertical) o muy baja (celu acostado).
+    const PHONE_SCREEN = window.matchMedia('(max-width: 767px), (max-height: 500px)');
+
     document.addEventListener('DOMContentLoaded', function () {
         const stage = document.querySelector('.jpx-lab__stage');
-        if (!stage || !window.JPEXLabFX) return;
-        window.JPEXLabFX.init(stage);
-        Object.keys(LAB_EFFECTS).forEach(function (id) {
-            window.JPEXLabFX.set(id, LAB_EFFECTS[id]);
-        });
+        const FX = window.JPEXLabFX;
+        if (!stage || !FX) return;
+        FX.init(stage);
+        function applyEffects() {
+            const chosen = PHONE_SCREEN.matches ? LAB_EFFECTS.celu : LAB_EFFECTS.compu;
+            FX.list().forEach(function (fx) { FX.set(fx.id, chosen[fx.id] || null); });
+        }
+        applyEffects();
+        // Si cambia la pantalla (girar el celu, achicar la ventana), se cambia de lista.
+        if (PHONE_SCREEN.addEventListener) PHONE_SCREEN.addEventListener('change', applyEffects);
+    });
+
+    // En el celu se recorre el laboratorio deslizando el dedo (elegido en bocetos: B con inercia).
+    // El "paseo corto" que muestra que se puede recorrer va solo la primera vez de cada visita.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.JPEXLabSwipe) return;
+        let peeked = false;
+        try { peeked = sessionStorage.getItem('jpexLabPeek') === '1'; } catch (e) { /* sin almacenamiento */ }
+        window.JPEXLabSwipe.enable({ inertia: 1, hint: peeked ? 'off' : 'peek' });
+        try { sessionStorage.setItem('jpexLabPeek', '1'); } catch (e) { /* sin almacenamiento */ }
     });
 </script>
 <script>
@@ -325,8 +363,27 @@
                 if (open) { window.JPEXLabPan.disable(); } else { window.JPEXLabPan.enable(); }
             }
         }
+        // El cartel de entrada se puede achicar a una pastilla. Se recuerda mientras dure la visita.
+        const hud = document.getElementById('labHud');
+        const hudMin = document.getElementById('labHudMin');
+        const hudPill = document.getElementById('labHudPill');
+        function setHudMin(min, moveFocus) {
+            lab.classList.toggle('is-hud-min', min);
+            hud?.toggleAttribute('inert', min);
+            hudPill?.setAttribute('aria-expanded', min ? 'false' : 'true');
+            if (hudPill) hudPill.tabIndex = min ? 0 : -1;
+            try { sessionStorage.setItem('jpexLabHudMin', min ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
+            if (moveFocus) { (min ? hudPill : hudMin)?.focus(); }
+        }
+        hudMin?.addEventListener('click', function () { setHudMin(true, true); });
+        hudPill?.addEventListener('click', function () { setHudMin(false, true); });
+        let startMin = false;
+        try { startMin = sessionStorage.getItem('jpexLabHudMin') === '1'; } catch (e) { /* sin almacenamiento */ }
+        setHudMin(startMin, false);
+
         openBtn?.addEventListener('click', function () { setOpen(true); closeBtn?.focus(); });
-        closeBtn?.addEventListener('click', function () { setOpen(false); openBtn?.focus(); });
+        // "Ver el laboratorio": cierra el probador y deja el cartel achicado, para ver el lugar.
+        closeBtn?.addEventListener('click', function () { setOpen(false); setHudMin(true, true); });
         setOpen(!panel.hidden);
     });
 </script>

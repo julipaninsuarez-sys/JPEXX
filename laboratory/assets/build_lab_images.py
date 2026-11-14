@@ -129,16 +129,23 @@ def leds_off(lit, off):
     return Image.composite(dark, off, hot)
 
 
+CAPSULE_SHARPEN = ImageFilter.UnsharpMask(radius=1.2, percent=45, threshold=2)
+CAPSULE_WEBP = dict(quality=95, alpha_quality=100, method=6)  # Alta calidad: en el celu se nota la compresión.
+
+
 def capsule_images():
-    """Exporta las cápsulas y su versión "luz apagada" (sin el resplandor rojo, con su transparencia)."""
+    """Exporta las cápsulas y su versión "luz apagada" (sin el resplandor rojo, con su transparencia).
+    Se les da un poco de nitidez porque en pantalla se ven a un tamaño parecido al original."""
     src = Image.open(CAPSULE_SRC).convert('RGBA')
     for name, x in CAPSULE_BOXES.items():
         crop = src.crop((x, 11, x + CAPSULE_SIZE[0], 11 + CAPSULE_SIZE[1]))
-        crop.save(OUT / f'capsula-{name}.webp', 'WEBP', quality=88, method=6)
         rgb, alpha = crop.convert('RGB'), crop.getchannel('A')
-        off = leds_off(rgb, lights_off(rgb, max_shade=150)).convert('RGBA')
+        lit = rgb.filter(CAPSULE_SHARPEN).convert('RGBA')
+        lit.putalpha(alpha)
+        lit.save(OUT / f'capsula-{name}.webp', 'WEBP', **CAPSULE_WEBP)
+        off = leds_off(rgb, lights_off(rgb, max_shade=150)).filter(CAPSULE_SHARPEN).convert('RGBA')
         off.putalpha(alpha)
-        off.save(OUT / f'capsula-{name}-off.webp', 'WEBP', quality=88, method=6)
+        off.save(OUT / f'capsula-{name}-off.webp', 'WEBP', **CAPSULE_WEBP)
         print(f'cápsula {name}: {crop.size}')
 
 

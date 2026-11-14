@@ -16,7 +16,7 @@
     // (enredaderas y círculo), que empiezan apagados. El mouse, encendido.
     var START_OFF = ['ojos', 'venas', 'circulo'];
     var defaults = {
-        mouse: 'off', capsula: 'cerrada', capSize: null, capW: 17, capY: 79,
+        mouse: 'off', deslizar: 'b', deslizarAviso: 'a', capsula: 'cerrada', capSize: null, capW: 17, capY: 79,
         capNiebla: 'b', capReflejo: 'a', capResplandor: 'a', capLuz: 'a', capColor: 'a', capParpadeo: 'a'
     };
     // Valores de la cápsula que no se apagan con "Todo apagado".
@@ -127,6 +127,30 @@
         { value: 'on', letter: 'Encendido' },
         { value: 'off', letter: 'Apagado' }
     ]);
+
+    /* ---------- Recorrer con el dedo (celu): lab-swipe.js ---------- */
+
+    var Swipe = window.JPEXLabSwipe;
+    if (Swipe) {
+        addGroup('deslizar', 'Deslizar con el dedo (celu)', [
+            { value: null, letter: 'Apagado' },
+            { value: 'a', letter: 'A', name: 'Sigue el dedo' },
+            { value: 'b', letter: 'B', name: 'Con inercia' }
+        ]);
+        addGroup('deslizarAviso', 'Deslizar · aviso al entrar', [
+            { value: null, letter: 'Ninguno' },
+            { value: 'a', letter: 'A', name: 'Cartelito' },
+            { value: 'b', letter: 'B', name: 'Paseo corto' }
+        ]);
+    }
+    function applySwipe() {
+        if (!Swipe) return;
+        if (!state.deslizar) { Swipe.disable(); return; }
+        Swipe.enable({
+            inertia: state.deslizar === 'b' ? 1 : 0,
+            hint: state.deslizarAviso === 'a' ? 'text' : state.deslizarAviso === 'b' ? 'peek' : 'off'
+        });
+    }
 
     /* ---------- Cápsula: probar el tamaño sobre el círculo del piso ---------- */
 
@@ -279,7 +303,7 @@
         var w = state.capW;
         capsule.hidden = capFloor.hidden = !state.capsula;
         if (state.capsula) {
-            var src = imgFolder + 'capsula-' + state.capsula + '.webp?v=1';
+            var src = imgFolder + 'capsula-' + state.capsula + '.webp?v=2';
             if (capImg.getAttribute('src') !== src) {
                 capImg.src = capRefl.src = src;
                 capOff.src = src.replace('.webp', '-off.webp');
@@ -320,6 +344,10 @@
             else Pan.disable();
             return;
         }
+        if (id === 'deslizar' || id === 'deslizarAviso') {
+            applySwipe();
+            return;
+        }
         if (id === 'capSize') {
             if (state.capSize) state.capW = CAP_SIZES[state.capSize];
             applyCapsule();
@@ -337,6 +365,8 @@
             return fx.label + ' ' + (state[fx.id] ? state[fx.id].toUpperCase() : 'apagado');
         });
         parts.push('Mouse ' + (state.mouse === 'on' ? 'encendido' : 'apagado'));
+        parts.push('Deslizar ' + (state.deslizar ? state.deslizar.toUpperCase() : 'apagado') +
+            ', aviso ' + (state.deslizarAviso ? state.deslizarAviso.toUpperCase() : 'ninguno'));
         parts.push('Cápsula ' + (state.capsula || 'apagada') + ', ancho ' + state.capW +
             '%, base ' + state.capY + '% (arriba ' + capTop().toFixed(1) + '%)');
         var letter = function (v) { return v ? v.toUpperCase() : 'apagado'; };

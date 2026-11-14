@@ -21,12 +21,23 @@
     --ease-spring: cubic-bezier(.3, 1.5, .5, 1);
 }
 
+/* Fondo de la página: negro alrededor (lo que se ve si el celu "rebota") y crema solo
+   en el contenido. Sin rebote a los costados; arriba y abajo sí, para poder
+   tirar hacia abajo y recargar la página. */
+html,
+body { overscroll-behavior-x: none; }
 body {
-    background-color: var(--paper);
+    background-color: var(--ink);
     color: var(--ink);
     font-family: var(--font-body);
     overflow-x: hidden;
 }
+main {
+    background-color: var(--paper);
+    padding-bottom: 3rem;      /* El espacio que antes daba el mt-5 del pie. */
+    overflow-x: clip;          /* Lo que asoma de costado (la cinta inclinada) no corre la página. */
+}
+.jpx-footer.mt-5 { margin-top: 0 !important; }
 
 a:focus-visible,
 button:focus-visible {
@@ -714,6 +725,19 @@ button:focus-visible {
     font-size: .9rem;
     margin: 0;
 }
+html { background-color: var(--ink); }
+.jpx-footer { padding-bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Fotos del abanico del inicio: ocupan el cuadro entero, del tamaño que sea.
+   Las imágenes traen un alto fijo de 320px en el HTML; acá se pisa para que acompañen al cuadro
+   cuando se achica (si no, en el celu la remera se cae para abajo). */
+.jpx-fan-card .jpx-stage > img,
+.jpx-fan-card .jpx-stage > div {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100% !important;
+}
 
 /* Celulares: dos cards por fila */
 @media (max-width: 575.98px) {
@@ -724,6 +748,21 @@ button:focus-visible {
     .jpx-card__sizes { display: none; }
     .jpx-card__cta { padding: .5rem .65rem; font-size: .95rem; letter-spacing: .08em; }
     .jpx-section-head { align-items: flex-start; flex-direction: column; gap: .4rem; }
+    .jpx-fan-card .jpx-stage > img { padding: 6px !important; }
+
+    /* Categorías en franjas bajitas, una debajo de la otra (para que no peguen tan fuerte). */
+    .jpx-cats { gap: .75rem; }
+    .jpx-cat {
+        min-height: 0;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: .95rem 1rem;
+        box-shadow: 3px 3px 0 var(--ink);
+    }
+    .jpx-cat__name { font-size: 1.8rem; margin: 0; }
+    .jpx-cat__go { font-size: .9rem; }
+    .jpx-cat img { width: 32%; right: 30%; top: -40%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -744,6 +783,8 @@ button:focus-visible {
     background: #0a0709;
 }
 .jpx-lab-page main {
+    background: none;
+    padding-bottom: 0;
     display: flex;
     min-height: 0;
 }
@@ -793,10 +834,121 @@ button:focus-visible {
     color: #fff;
     background: linear-gradient(135deg, rgba(10, 7, 9, .92), rgba(10, 7, 9, .74));
     border-left: 3px solid var(--accent);
+    transform-origin: 0 100%;
+    transition: opacity .25s ease, transform .35s var(--ease-out), visibility 0s;
 }
-.jpx-lab.is-panel-open .jpx-lab__hud { display: none; }
+.jpx-lab.is-panel-open .jpx-lab__hud,
+.jpx-lab.is-panel-open .jpx-lab__hud-pill { display: none; }
+
+/* Botón para achicar el cartel (arriba a la derecha del cartel). */
+.jpx-lab__hud-min {
+    position: absolute;
+    top: .35rem;
+    right: .35rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .25);
+    color: #fff;
+    cursor: pointer;
+}
+.jpx-lab__hud-min span {
+    width: .85rem;
+    height: 2px;
+    background: currentColor;
+}
+.jpx-lab__hud-min:hover { border-color: var(--accent); color: var(--mustard); }
+
+/* Cartel achicado: se encoge hacia la esquina y queda la pastilla. */
+.jpx-lab.is-hud-min .jpx-lab__hud {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(.4);
+    transition: opacity .2s ease, transform .3s var(--ease-out), visibility 0s .3s;
+}
+.jpx-lab__hud-pill {
+    position: absolute;
+    left: clamp(1rem, 4vw, 3.5rem);
+    bottom: clamp(1.25rem, 6vh, 3.5rem);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .5rem .55rem .5rem .85rem;
+    color: #fff;
+    background: rgba(10, 7, 9, .88);
+    border: 0;
+    border-left: 3px solid var(--accent);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity .2s ease, transform .3s var(--ease-out), visibility 0s .3s;
+}
+.jpx-lab.is-hud-min .jpx-lab__hud-pill {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: opacity .25s ease .1s, transform .35s var(--ease-out) .1s, visibility 0s;
+}
+.jpx-lab__hud-pill-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    letter-spacing: .06em;
+    line-height: 1;
+}
+.jpx-lab__hud-pill-plus {
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--accent);
+}
+.jpx-lab__hud-pill:hover .jpx-lab__hud-pill-plus { background: var(--accent-deep); }
+
+/* --- Lab: recorrer deslizando el dedo (lab-swipe.js) --- */
+.jpx-lab.is-swipe .jpx-lab__stage { touch-action: none; }
+.jpx-lab.is-dragging .jpx-lab__stage { will-change: transform; }
+.jpx-swipe-hint {
+    position: absolute;
+    left: 50%;
+    top: 1.25rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .5rem .9rem;
+    white-space: nowrap;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: .9rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(10, 7, 9, .78);
+    border: 1px solid rgba(255, 255, 255, .18);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -6px);
+    transition: opacity .45s ease, transform .45s var(--ease-out);
+}
+.jpx-swipe-hint.is-on { opacity: 1; transform: translate(-50%, 0); }
+.jpx-swipe-hint__arrow {
+    color: var(--accent);
+    font-size: 1.1rem;
+    animation: jpx-swipe-nudge 1.2s ease-in-out infinite;
+}
+.jpx-swipe-hint__arrow--l { animation-name: jpx-swipe-nudge-l; }
+@keyframes jpx-swipe-nudge { 50% { transform: translateX(4px); } }
+@keyframes jpx-swipe-nudge-l { 50% { transform: translateX(-4px); } }
 .jpx-lab__hud-kicker {
     margin: 0 0 .25rem;
+    padding-right: 2.25rem;   /* Lugar para el botón de achicar. */
     font-family: var(--font-label);
     font-weight: 700;
     font-size: .85rem;

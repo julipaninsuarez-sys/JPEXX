@@ -309,14 +309,14 @@
     background: radial-gradient(closest-side, rgba(0, 0, 0, .8), rgba(0, 0, 0, 0));
 }
 
-/* Color: igualar brillo, contraste y nitidez con el fondo. */
+/* Color: igualar brillo y contraste con el fondo (sin desenfoque: en el celu se veía borrosa). */
 .cap-color-a .jpx-capsule__img,
 .cap-color-a .jpx-capsule__off {
-    filter: brightness(.86) contrast(1.06) saturate(.85) blur(.3px);
+    filter: brightness(.86) contrast(1.06) saturate(.85);
 }
 .cap-color-b .jpx-capsule__img,
 .cap-color-b .jpx-capsule__off {
-    filter: brightness(.72) contrast(1.1) saturate(.8) blur(.4px);
+    filter: brightness(.72) contrast(1.1) saturate(.8);
 }
 
 /* Luz del lugar: naranja de la puerta (arriba, desde atrás), rojo de los tubos en los
