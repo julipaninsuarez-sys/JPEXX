@@ -251,7 +251,12 @@
     addGroup('capsula', 'Cápsula', [
         { value: null, letter: 'Apagada' },
         { value: 'cerrada', letter: 'Cerrada' },
-        { value: 'abierta', letter: 'Abierta' }
+        { value: 'abierta', letter: 'Abierta' },
+        { value: 'blender', letter: 'Blender', name: 'animada' }
+    ]);
+    // Cápsula hecha en Blender (C · Mezcla): un video con transparencia que se abre y muestra al maniquí.
+    addGroup('capRepetir', 'Cápsula Blender · animación', [
+        { value: 'go', letter: '▶', name: 'Repetir' }
     ]);
     addGroup('capSize', 'Tamaño de la cápsula', [
         { value: 'a', letter: 'A', name: 'Chica' },
@@ -299,10 +304,34 @@
         return state.capY - state.capW * CAP_RATIO * STAGE_RATIO;
     }
 
+    // Video de Blender: recortado a la zona de la cápsula (izq 30 %, arriba 12 %, 40 × 88 % del escenario).
+    var BLENDER_RECT = { left: 30, top: 12, width: 40, height: 88 };
+    var videoFolder = imgFolder.replace(/img\/lab\/$/, 'video/lab/');
+    var capVideo = null;
+    function blenderVideo(on) {
+        if (!on) {
+            if (capVideo) { capVideo.destroy(); capVideo = null; }
+            return;
+        }
+        if (!capVideo && window.JPEXCapsuleVideo) {
+            var small = window.matchMedia('(max-width: 767px)').matches;
+            capVideo = window.JPEXCapsuleVideo.create(stage, {
+                src: videoFolder + (small ? 'capsula-c-402.mp4' : 'capsula-c-670.mp4') + '?v=2',
+                rect: BLENDER_RECT
+            });
+            setTimeout(function () { if (capVideo) capVideo.play(); }, 700);
+        }
+        if (capVideo) capVideo.el.style.zIndex = state.capNiebla === 'b' ? 7 : 5;
+    }
+
     function applyCapsule() {
         var w = state.capW;
-        capsule.hidden = capFloor.hidden = !state.capsula;
-        if (state.capsula) {
+        var isBlender = state.capsula === 'blender';
+        blenderVideo(isBlender);
+        capsule.hidden = !state.capsula || isBlender;
+        capFloor.hidden = !state.capsula;
+        capFloor.classList.toggle('cap-blender', isBlender);
+        if (state.capsula && !isBlender) {
             var src = imgFolder + 'capsula-' + state.capsula + '.webp?v=2';
             if (capImg.getAttribute('src') !== src) {
                 capImg.src = capRefl.src = src;
@@ -323,7 +352,7 @@
             if (state[key]) cls.push(key.replace('cap', 'cap-').toLowerCase() + '-' + state[key]);
         });
         capsule.className = cls.join(' ');
-        capFloor.className = 'jpx-capsule-floor ' + cls.slice(1).join(' ');
+        capFloor.className = 'jpx-capsule-floor ' + cls.slice(1).join(' ') + (isBlender ? ' cap-blender' : '');
         flickerLater();
         // Si el ancho coincide con un tamaño A/B/C, ese botón queda marcado.
         var match = null;
@@ -351,6 +380,17 @@
         if (id === 'capSize') {
             if (state.capSize) state.capW = CAP_SIZES[state.capSize];
             applyCapsule();
+            return;
+        }
+        if (id === 'capRepetir') {
+            // Botón de acción: vuelve a pasar la animación (si la cápsula Blender está elegida).
+            if (state.capRepetir && state.capsula !== 'blender') {
+                state.capsula = 'blender';
+                applyCapsule();
+            } else if (state.capRepetir && capVideo) {
+                capVideo.play();
+            }
+            state.capRepetir = null;
             return;
         }
         if (id.indexOf('cap') === 0) {

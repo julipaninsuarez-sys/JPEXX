@@ -199,6 +199,11 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def cover_product(self):
+        """Una prenda de la categoría para decorar su bloque en el inicio."""
+        return self.products.filter(available=True).exclude(image='').exclude(image__isnull=True).first()
+
 
 # ==============================================================================
 # 3. MODELO PRODUCT CON RESOLUCIÓN AUTÓNOMA (BAJO ACOPLAMIENTO)
@@ -249,6 +254,15 @@ class Product(models.Model):
     # --------------------------------------------------------------------------
     # MÉTODOS DE DOMINIO (Encapsulamiento: Product resuelve sus propios datos)
     # --------------------------------------------------------------------------
+
+    @property
+    def stage_image_url(self):
+        """Foto de la prenda sin el fondo blanco de alrededor (products/cutouts.py), para que
+        detrás se vea el empapelado con los logos de JPEX. La original no se toca."""
+        if not self.image:
+            return ''
+        from products.cutouts import cutout_url
+        return cutout_url(self.image)
 
     def get_image_info(self):
         """

@@ -1,0 +1,36 @@
+{# Botón del carrito con forma de cápsula. Abre el carrito lateral (offcanvas de base.html). #}
+{# Hay cuatro dibujos para elegir en los bocetos (A, B, C, D); se ve uno solo (ver jpex.css). #}
+<button type="button" class="jpx-cart-btn" id="jpexCartButton"
+        data-bs-toggle="offcanvas" data-bs-target="#jpexCartDrawer" aria-controls="jpexCartDrawer">
+    {# A · Tubo: la cápsula del laboratorio, con vidrio rojo. #}
+    <svg class="jpx-capico jpx-capico--a" viewBox="0 0 28 44" aria-hidden="true">
+        <rect class="m" x="8" y="1.5" width="12" height="3" rx="1"/>
+        <rect class="m" x="4" y="4.5" width="20" height="5" rx="1.5"/>
+        <rect class="g" x="6" y="9.5" width="16" height="23"/>
+        <rect class="s" x="8.5" y="12" width="2" height="18" rx="1"/>
+        <rect class="m" x="4" y="32.5" width="20" height="5" rx="1.5"/>
+        <rect class="m" x="2" y="37.5" width="24" height="5" rx="1.5"/>
+        <rect class="l" x="10" y="34.3" width="8" height="1.4"/>
+    </svg>
+    {# B · Se llena: solo el contorno; el vidrio se llena de rojo con cada prenda. #}
+    <svg class="jpx-capico jpx-capico--b" viewBox="0 0 28 44" aria-hidden="true">
+        <rect class="lvl" x="7.6" y="10.5" width="12.8" height="21.5"/>
+        <path class="o" d="M9 2.5h10M5 5.5h18v4H5zM7 9.5v23M21 9.5v23M5 32.5h18v4H5zM3 36.5h22v5H3z"/>
+    </svg>
+    {# C · Píldora: la cápsula de remedio, mitad roja y mitad hueso. #}
+    <svg class="jpx-capico jpx-capico--c" viewBox="0 0 40 40" aria-hidden="true">
+        <g transform="rotate(-40 20 20)">
+            <path class="r" d="M20 12h-8a8 8 0 0 0 0 16h8z"/>
+            <path class="w" d="M20 12h8a8 8 0 0 1 0 16h-8z"/>
+            <rect class="sh" x="9" y="15" width="7" height="2.2" rx="1.1"/>
+        </g>
+    </svg>
+    {# D · Con remera: cápsula redondeada con una remera adentro. #}
+    <svg class="jpx-capico jpx-capico--d" viewBox="0 0 28 44" aria-hidden="true">
+        <rect class="o" x="3" y="2" width="22" height="40" rx="11"/>
+        <path class="t" d="M12 13.5q2 1.6 4 0l3.5 1.5 2 3.5-2 1-1-1.5V29h-9V18l-1 1.5-2-1 2-3.5z"/>
+        <path class="f" d="M7 34h14"/>
+    </svg>
+    <span class="jpx-cart-btn__count is-empty" id="jpexCartCountBadge">0</span>
+    <span class="visually-hidden">Abrir la cápsula (carrito)</span>
+</button>

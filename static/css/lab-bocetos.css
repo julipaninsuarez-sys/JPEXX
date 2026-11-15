@@ -460,3 +460,6 @@
     width: 100%;
     accent-color: #c4161c;
 }
+
+/* Cápsula de Blender: el video trae su propio reflejo; del piso de la página queda solo el resplandor. */
+.jpx-capsule-floor.cap-blender .jpx-capsule-floor__refl { display: none; }

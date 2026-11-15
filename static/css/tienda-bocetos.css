@@ -1,0 +1,342 @@
+/* Bocetos de la tienda: ideas nuevas para comparar (lo carga tienda-bocetos.js solo con ?bocetos).
+ * Cada idea se prende con un data-sk-<idea> en <html>. Temporal: cuando se elija, lo elegido
+ * pasa a jpex.css y este archivo se borra. */
+
+/* ===== 1. El carrito por dentro: "Tu cápsula" ===== */
+
+/* A · Afiche: papel, tarjetas con borde negro, total en etiqueta mostaza. */
+[data-sk-carrito="a"] #jpexCartDrawer {
+    background: var(--paper);
+    border-left: 3px solid var(--ink) !important;
+}
+[data-sk-carrito="a"] #jpexCartDrawer .offcanvas-header {
+    background-color: var(--ink) !important;
+    background-image: radial-gradient(rgba(255, 255, 255, .075) 1px, transparent 1.5px);
+    background-size: 9px 9px;
+    border-bottom: 3px solid var(--accent);
+}
+[data-sk-carrito] #jpexCartDrawerLabel {
+    font-family: var(--font-display);
+    font-weight: 400 !important;
+    font-size: 1.9rem;
+    letter-spacing: .06em !important;
+}
+[data-sk-carrito="a"] #jpexCartItemsContainer > .d-flex {
+    margin: 0 .25rem .8rem 0;
+    padding: .7rem !important;
+    background: var(--bone);
+    border: 2px solid var(--ink) !important;
+    box-shadow: 4px 4px 0 var(--ink);
+}
+[data-sk-carrito] #jpexCartItemsContainer img {
+    background: var(--stage) !important;
+    border: 2px solid var(--ink) !important;
+}
+[data-sk-carrito] #jpexCartItemsContainer .fw-bold.small.text-uppercase {
+    font-family: var(--font-label);
+    font-size: 1.05rem !important;
+    letter-spacing: .06em;
+}
+[data-sk-carrito] #jpexCartItemsContainer .btn-outline-dark {
+    width: 1.9rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    border-width: 2px;
+}
+[data-sk-carrito="a"] #jpexCartDrawer .offcanvas-body > .border-top {
+    background: transparent !important;
+    border-top: 2px dashed var(--ink) !important;
+}
+[data-sk-carrito] #jpexCartDrawer .offcanvas-body > .border-top .fw-bold.text-uppercase.small {
+    font-family: var(--font-label);
+    font-size: 1rem !important;
+    letter-spacing: .12em;
+}
+[data-sk-carrito] #jpexCartTotalAmount {
+    padding: 0 .55rem;
+    font-family: var(--font-display);
+    font-weight: 400 !important;
+    font-size: 2rem !important;
+}
+[data-sk-carrito="a"] #jpexCartTotalAmount {
+    color: var(--ink);
+    background: var(--mustard);
+    box-shadow: 3px 3px 0 var(--ink);
+    transform: rotate(-2deg);
+}
+[data-sk-carrito] #jpexCartWhatsappBtn {
+    font-family: var(--font-label);
+    font-size: 1.15rem;
+    letter-spacing: .1em;
+    color: #fff;
+    background: var(--accent) !important;
+}
+[data-sk-carrito="a"] #jpexCartWhatsappBtn { border: 2px solid var(--ink) !important; box-shadow: 5px 5px 0 var(--mustard); }
+[data-sk-carrito] #jpexClearCartBtn {
+    font-family: var(--font-label);
+    font-size: .95rem;
+    letter-spacing: .1em;
+    border-width: 2px;
+}
+
+/* B · Lab oscuro: negro con brillo rojo, como el laboratorio. */
+[data-sk-carrito="b"] #jpexCartDrawer {
+    color: #f1ece4;
+    background-color: #0d0a0c;
+    background-image:
+        radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1.5px),
+        radial-gradient(90% 40% at 50% 100%, rgba(212, 42, 20, .35), transparent 70%);
+    background-size: 9px 9px, 100% 100%;
+    border-left: 1px solid rgba(212, 42, 20, .6) !important;
+}
+[data-sk-carrito="b"] #jpexCartDrawer .offcanvas-header {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(212, 42, 20, .6);
+    box-shadow: 0 6px 24px rgba(212, 42, 20, .2);
+}
+[data-sk-carrito="b"] #jpexCartDrawerLabel { text-shadow: 0 0 14px rgba(212, 42, 20, .8); }
+[data-sk-carrito="b"] #jpexCartItemsContainer > .d-flex {
+    margin: 0 .25rem .8rem 0;
+    padding: .7rem !important;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(212, 42, 20, .45) !important;
+}
+[data-sk-carrito="b"] #jpexCartDrawer .text-muted { color: var(--muted-on-ink) !important; }
+[data-sk-carrito="b"] #jpexCartItemsContainer img { background-color: #1a1417 !important; border-color: rgba(212, 42, 20, .6) !important; }
+[data-sk-carrito="b"] #jpexCartItemsContainer .btn-outline-dark { color: #fff; border-color: rgba(255, 255, 255, .5); }
+[data-sk-carrito="b"] #jpexCartItemsContainer .btn-outline-dark:hover { background: var(--accent); border-color: var(--accent); }
+[data-sk-carrito="b"] #jpexCartDrawer .offcanvas-body > .border-top {
+    background: transparent !important;
+    border-top: 1px solid rgba(212, 42, 20, .6) !important;
+}
+[data-sk-carrito="b"] #jpexCartTotalAmount { color: #fff; text-shadow: 0 0 16px rgba(212, 42, 20, .9); }
+[data-sk-carrito="b"] #jpexCartWhatsappBtn { border: 0 !important; box-shadow: 0 0 22px rgba(212, 42, 20, .55); }
+[data-sk-carrito="b"] #jpexClearCartBtn { color: #fff; border-color: rgba(255, 255, 255, .45); }
+[data-sk-carrito="b"] #jpexClearCartBtn:hover { background: #fff; color: var(--ink); }
+
+/* ===== 2. Al agregar: la prenda viaja a la cápsula ===== */
+.jpx-fly {
+    position: fixed;
+    z-index: 3100;
+    pointer-events: none;
+    object-fit: contain;
+    /* Solo la remera, sin recuadro: una sombra que sigue su silueta. */
+    filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .45));
+}
+.jpx-spark {
+    position: fixed;
+    z-index: 3100;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: #ff5a3c;
+    box-shadow: 0 0 6px 2px rgba(212, 42, 20, .9), 0 0 14px 4px rgba(212, 42, 20, .45);
+}
+
+/* ===== 3. Barra de anuncios como cinta corrida ===== */
+.jpx-announce {
+    padding: 0 !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: left !important;
+}
+.jpx-announce__track {
+    display: flex;
+    width: max-content;
+    animation: jpx-announce 34s linear infinite;
+}
+.jpx-announce:hover .jpx-announce__track { animation-play-state: paused; }
+.jpx-announce__group { display: flex; align-items: center; }
+.jpx-announce__item {
+    padding: 0 1.1rem;
+    font-family: var(--font-label);
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+.jpx-announce__item a { color: inherit; }
+.jpx-announce__star { color: var(--accent); }
+@keyframes jpx-announce { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .jpx-announce__track { animation: none; } }
+
+/* A · Cinta oscura */
+.jpx-announce--a {
+    color: #fff !important;
+    background: var(--ink) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.jpx-announce--a .jpx-announce__item { padding-block: .5rem; font-size: .9rem; }
+.jpx-announce--a .jpx-announce__item a { color: var(--mustard); text-underline-offset: 3px; }
+
+/* B · Cinta mostaza (como la del inicio) */
+.jpx-announce--b {
+    color: var(--ink) !important;
+    background: var(--mustard) !important;
+    border-bottom: 3px solid var(--ink);
+}
+.jpx-announce--b .jpx-announce__item { padding-block: .4rem; font-size: 1.05rem; }
+.jpx-announce--b .jpx-announce__item a { color: var(--ink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* ===== 4. Detalle en el celu: botón fijo abajo ===== */
+.jpx-stickybuy { display: none; }
+@media (max-width: 767.98px) {
+    .jpx-stickybuy {
+        position: fixed;
+        z-index: 1040;
+        display: flex;
+        transition: transform .35s var(--ease-out), opacity .25s ease;
+    }
+    .jpx-stickybuy:not(.is-on) { opacity: 0; pointer-events: none; }
+
+    /* A · Barra con nombre, precio y botón */
+    .jpx-stickybuy--a {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        align-items: center;
+        gap: .75rem;
+        padding: .6rem .75rem calc(.6rem + env(safe-area-inset-bottom, 0px));
+        color: #fff;
+        background: var(--ink);
+        border-top: 3px solid var(--accent);
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, .3);
+    }
+    .jpx-stickybuy--a:not(.is-on) { transform: translateY(110%); }
+    .jpx-stickybuy__info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .jpx-stickybuy__name {
+        overflow: hidden;
+        font-family: var(--font-label);
+        font-weight: 700;
+        font-size: .95rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+    .jpx-stickybuy__price { font-family: var(--font-display); font-size: 1.5rem; line-height: 1; color: var(--mustard); }
+    .jpx-stickybuy__btn {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .75rem 1rem;
+        font-family: var(--font-label);
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #fff;
+        background: var(--accent);
+        border: 0;
+        box-shadow: 3px 3px 0 var(--mustard);
+    }
+    .jpx-stickybuy__btn svg { height: 1.3rem; width: auto; fill: currentColor; }
+
+    /* B · Botón redondo flotante con la cápsula y un "+" */
+    .jpx-stickybuy--b {
+        right: 1rem;
+        bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+        width: 4.1rem;
+        height: 4.1rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        color: #fff;
+        background: var(--accent);
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+        box-shadow: 4px 4px 0 var(--ink), 0 0 22px rgba(212, 42, 20, .5);
+    }
+    .jpx-stickybuy--b:not(.is-on) { transform: scale(.3); }
+    .jpx-stickybuy--b svg { height: 2.1rem; width: auto; fill: currentColor; }
+    .jpx-stickybuy--b .jpx-stickybuy__plus {
+        position: absolute;
+        top: -.3rem;
+        right: -.3rem;
+        display: grid;
+        place-items: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        font-weight: 800;
+        color: var(--ink);
+        background: var(--mustard);
+        border: 2px solid var(--ink);
+        border-radius: 50%;
+    }
+    /* El panel de bocetos se corre para no tapar la barra. */
+    body.has-stickybuy-a .jpx-skt { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+    body.has-stickybuy-b .jpx-skt { right: auto; left: 12px; width: min(300px, calc(100vw - 110px)); }
+}
+
+/* ===== 5. Galería de fotos de la prenda ===== */
+.jpx-gal-wrap { display: flex; flex-direction: column; gap: .9rem; }
+.jpx-gal { display: none; gap: .6rem; }
+.jpx-gal__thumb {
+    position: relative;
+    flex: 0 0 auto;
+    width: 4.6rem;
+    aspect-ratio: 1;
+    padding: 0;
+    overflow: hidden;
+    background: var(--stage);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.jpx-gal__thumb:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.jpx-gal__thumb[aria-pressed="true"] { border-color: var(--accent); box-shadow: 3px 3px 0 var(--accent); }
+.jpx-gal__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.jpx-gal__thumb--photo img { background: #fff; }
+.jpx-gal__thumb--zoom img { transform: scale(2.2); transform-origin: 50% 42%; }
+.jpx-gal__thumb--soon {
+    display: grid;
+    place-items: center;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: .68rem;
+    text-align: center;
+    letter-spacing: .08em;
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--bone);
+    border-style: dashed;
+    box-shadow: none;
+}
+.jpx-gal__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: .1rem 0;
+    font-family: var(--font-label);
+    font-weight: 700;
+    font-size: .62rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(18, 16, 19, .82);
+}
+.jpx-detail__stage.is-photo img { background: #fff; padding: 0; }
+.jpx-detail__stage.is-zoom img { transform: scale(1.9); transform-origin: 50% 45%; }
+.jpx-detail__stage img { transition: transform .35s var(--ease-out); }
+
+/* A · Miniaturas abajo */
+[data-sk-galeria="a"] .jpx-gal { display: flex; flex-wrap: wrap; }
+
+/* B · Miniaturas al costado (abajo en el celu) y lupa al pasar el mouse */
+[data-sk-galeria="b"] .jpx-gal { display: flex; }
+@media (min-width: 768px) {
+    [data-sk-galeria="b"] .jpx-gal-wrap { flex-direction: row-reverse; align-items: flex-start; }
+    [data-sk-galeria="b"] .jpx-gal { flex-direction: column; }
+    [data-sk-galeria="b"] .jpx-gal-wrap > .jpx-detail__media { flex: 1; min-width: 0; }
+}
+[data-sk-galeria] .jpx-detail__stage { cursor: zoom-in; }
+[data-sk-galeria] .jpx-detail__stage.is-lens img { transition: transform .15s ease-out; }
+
+/* Con galería, en compu: la foto ocupa todo el alto del bloque de la derecha. */
+@media (min-width: 768px) {
+    .jpx-gal-wrap { height: 100%; }
+    .jpx-gal-wrap > .jpx-detail__media { flex: 1; min-height: 0; }
+}

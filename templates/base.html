@@ -9,7 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{% static 'css/jpex.css' %}?v=10" rel="stylesheet">
+    <link href="{% static 'css/jpex.css' %}?v=14" rel="stylesheet">
+    <link href="{% static 'css/tienda-bocetos.css' %}?v=4" rel="stylesheet">
+    {# Variantes de diseño elegidas (buscador, cápsula, carrito, anuncios, galería…). Con ?bocetos abre un panel para probar otras. #}
+    <script src="{% static 'js/tienda-bocetos.js' %}?v=8"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100 {% block body_class %}{% endblock %}">
@@ -27,24 +30,44 @@
     <!-- Navbar -->
     {% with url_name=request.resolver_match.url_name %}
     <nav class="navbar navbar-expand-lg jpx-nav sticky-top py-3" data-bs-theme="dark">
-        <!-- Buscador Predictivo en Vivo JPEX -->
-<div class="position-relative ms-lg-3 my-2 my-lg-0" style="min-width: 270px;">
-    <div class="input-group input-group-sm">
-        <span class="input-group-text bg-white border-dark rounded-0">🔍</span>
-        <input type="text"
-               id="jpexLiveSearchInput"
-               class="form-control border-dark rounded-0"
-               placeholder="Buscar remera, buzo, banda..."
-               autocomplete="off">
-    </div>
 
-    <!-- Contenedor flotante donde aparecen los resultados en vivo -->
-    <div id="jpexLiveSearchResults"
-         class="position-absolute bg-white border border-dark w-100 shadow-lg d-none"
-         style="top: 100%; left: 0; z-index: 2000; max-height: 360px; overflow-y: auto;">
-    </div>
-</div>
+        <div class="container jpx-nav__bar">
+            <a class="navbar-brand jpx-logo" href="{% url 'products:home' %}">JPEX<span>.</span></a>
 
+            {# Buscador predictivo en vivo (la lógica es de Juli, en el script de abajo). #}
+            <button type="button" class="jpx-search-toggle" id="jpexSearchToggle"
+                    aria-controls="jpexSearchField" aria-expanded="false" aria-label="Buscar prendas">
+                <svg class="jpx-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+            </button>
+            <div class="jpx-search" id="jpexSearchField">
+                <span class="jpx-search__icon" aria-hidden="true">
+                    <svg class="jpx-ico" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+                </span>
+                <input type="search" id="jpexLiveSearchInput" class="jpx-search__input"
+                       placeholder="Buscar remera, buzo, banda..." autocomplete="off" aria-label="Buscar prendas">
+                <div id="jpexLiveSearchResults" class="jpx-search__results d-none"></div>
+            </div>
+
+            {# El carrito es una cápsula: todo lo que vas a comprar se guarda ahí. #}
+            {% include 'products/_capsule_cart.html' %}
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto gap-lg-3">
+                    <li class="nav-item">
+                        <a class="nav-link {% if url_name == 'home' %}active{% endif %}" {% if url_name == 'home' %}aria-current="page"{% endif %} href="{% url 'products:home' %}">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if url_name == 'catalog' or url_name == 'catalog_by_category' %}active{% endif %}" {% if url_name == 'catalog' %}aria-current="page"{% endif %} href="{% url 'products:catalog' %}">Catálogo</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if url_name == 'lab' or url_name == 'lab_product' or url_name == 'lab_sketches' %}active{% endif %}" {% if url_name == 'lab' %}aria-current="page"{% endif %} href="{% url 'lab' %}">Lab</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 <script>
 (function() {
     const searchInput = document.getElementById('jpexLiveSearchInput');
@@ -115,26 +138,6 @@
     });
 })();
 </script>
-
-        <div class="container">
-            <a class="navbar-brand jpx-logo" href="{% url 'products:home' %}">JPEX<span>.</span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto gap-lg-3">
-                    <li class="nav-item">
-                        <a class="nav-link {% if url_name == 'home' %}active{% endif %}" {% if url_name == 'home' %}aria-current="page"{% endif %} href="{% url 'products:home' %}">Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if url_name == 'catalog' or url_name == 'catalog_by_category' %}active{% endif %}" {% if url_name == 'catalog' %}aria-current="page"{% endif %} href="{% url 'products:catalog' %}">Catálogo</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if url_name == 'lab' or url_name == 'lab_product' or url_name == 'lab_sketches' %}active{% endif %}" {% if url_name == 'lab' %}aria-current="page"{% endif %} href="{% url 'lab' %}">Lab</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
     </nav>
     {% endwith %}
 
@@ -151,10 +154,18 @@
             <div class="jpx-footer__mark" aria-hidden="true">JPEX</div>
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
                 <p class="jpx-footer__legal">JPEX STORE &mdash; Indumentaria Masculina &mdash; Todos los derechos reservados.</p>
-                <div class="jpx-footer__links d-flex gap-4">
-                    <a href="{% url 'products:home' %}">Inicio</a>
-                    <a href="{% url 'products:catalog' %}">Catálogo</a>
-                </div>
+                {# Contacto por WhatsApp (mismo número que el carrito, el detalle y el Lab). #}
+                <a class="jpx-footer__wsp" href="https://wa.me/5492213146934" target="_blank" rel="noopener"
+                   aria-label="Escribinos por WhatsApp al +54 9 221 314-6934">
+                    <svg class="jpx-footer__wsp-logo" viewBox="0 0 32 32" aria-hidden="true">
+                        <path class="b" d="M16 3C8.8 3 3 8.6 3 15.6c0 2.5.7 4.8 2 6.8L3.3 29l6.8-1.8c1.8 1 3.8 1.5 5.9 1.5 7.2 0 13-5.6 13-12.6S23.2 3 16 3z"/>
+                        <path class="p" d="M11.6 9.5c-.4 0-.9.1-1.3.6-.4.5-1.5 1.5-1.5 3.6s1.6 4.2 1.8 4.5c.2.3 3.1 4.8 7.6 6.6 3.7 1.5 4.5 1.2 5.3 1.1.8-.1 2.6-1.1 3-2.1.4-1 .4-1.9.3-2.1-.1-.2-.4-.3-.9-.6l-3-1.5c-.4-.2-.7-.2-1 .2l-1.3 1.6c-.2.3-.5.3-.9.1-.4-.2-1.8-.7-3.4-2.1-1.3-1.1-2.1-2.5-2.4-2.9-.2-.4 0-.6.2-.8l.7-.8c.2-.3.3-.5.5-.8.1-.3.1-.6 0-.8l-1.4-3.3c-.3-.8-.7-.7-1-.7z"/>
+                    </svg>
+                    <span class="jpx-footer__wsp-text">
+                        <span class="jpx-footer__wsp-label">Escribinos</span>
+                        <span class="jpx-footer__wsp-num">+54 9 221 314-6934</span>
+                    </span>
+                </a>
             </div>
         </div>
     </footer>
@@ -220,7 +231,7 @@
 <script>
 (function() {
     // Cambiá este número por tu WhatsApp real con código de país (sin + ni espacios)
-    const JPEX_WHATSAPP_PHONE = "5491100000000";
+    const JPEX_WHATSAPP_PHONE = "5492213146934";
     const STORAGE_KEY = "jpex_cart_v1";
 
     function getCart() {
@@ -368,5 +379,6 @@
     renderCart();
 })();
 </script>
+<script src="{% static 'js/jpex-tienda.js' %}?v=1" defer></script>
 </body>
 </html>
