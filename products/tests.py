@@ -6,11 +6,22 @@ Estas pruebas no validan que los números provisorios sean buenos: comprueban
 que la lógica hace lo que dice el diseño. Por eso, cuando se puede, las cuentas
 esperadas se arman con los parámetros de sizing.py en vez de números a mano.
 """
+import logging
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.apps import apps
+from django.test import Client, SimpleTestCase, TestCase
+from django.urls import reverse
 
 from products import sizing
+from products.models import (
+    Category,
+    Product,
+    ProductMeasurementDetail,
+    Size,
+    SizeTemplate,
+    SizeTemplateItem,
+)
 from products.sizing import (
     ABDOMEN_EXTRA_EASE_CM,
     BUILD_CHEST_ADJUST_CM,
@@ -411,3 +422,318 @@ class AllowedFitsTests(SimpleTestCase):
         fits, _ = allowed_fits("slim")
         fits.append("holgado")
         self.assertEqual(allowed_fits("slim"), (["ajustado", "regular"], "ajustado"))
+
+
+# =============================================================================
+# Vista (caso 21). Usan TestCase porque crean datos en una base de prueba
+# temporal (Django la crea y la borra sola; no toca tu db.sqlite3).
+# =============================================================================
+
+# Datos de cuerpo inventados.
+VALID_POST = {"height_cm": "173", "weight_kg": "71", "build": "medio", "fit": "regular"}
+
+
+class CaptureLogs(logging.Handler):
+    """Junta todos los mensajes de log que se escriban mientras está activo."""
+
+    def __init__(self):
+        super().__init__(level=logging.DEBUG)
+        self.messages = []
+
+    def emit(self, record):
+        self.messages.append(record.getMessage())
+
+    def __enter__(self):
+        root = logging.getLogger()
+        self._old_level = root.level
+        root.addHandler(self)
+        root.setLevel(logging.DEBUG)
+        return self
+
+    def __exit__(self, *exc):
+        root = logging.getLogger()
+        root.removeHandler(self)
+        root.setLevel(self._old_level)
+
+
+def sell(product, *names):
+    """Marca que la prenda vende estos talles (los del selector)."""
+    for name in names:
+        size = Size.objects.filter(name=name).first() or Size.objects.create(name=name)
+        product.sizes.add(size)
+
+
+ALL_DEFAULT_NAMES = [s["size_name"] for s in sizing.DEFAULT_SIZES]
+
+
+def count_all_rows():
+    """Cantidad de filas de cada tabla del proyecto."""
+    return {model._meta.label: model.objects.count() for model in apps.get_models()}
+
+
+class RecommendViewTests(TestCase):
+    def setUp(self):
+        self.remeras = Category.objects.create(name="Remeras", slug="remeras")
+        self.product = Product.objects.create(
+            category=self.remeras, name="Remera prueba", slug="remera-prueba", price=1000
+        )
+        sell(self.product, *ALL_DEFAULT_NAMES)
+        self.url = reverse("products:recommend_size", args=[self.product.slug])
+
+    def post(self, data, url=None):
+        return self.client.post(url or self.url, data)
+
+    def test_post_valido_devuelve_la_recomendacion(self):
+        response = self.post(VALID_POST)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        # Sin medidas cargadas: usa DEFAULT_SIZES con corte oversize y sin elasticidad.
+        expected = sizing.recommend_size(
+            sizes=sizing.DEFAULT_SIZES, garment_type="remera",
+            fit_style=sizing.DEFAULT_FIT_STYLE, stretch_level="none",
+            height_cm=173, weight_kg=71, build="medio", fit="regular",
+        )
+        self.assertTrue(data["ok"])
+        for key in ["recommended", "alternative", "alternative_direction", "reason",
+                    "confidence", "measurements_mismatch", "calibrated"]:
+            self.assertEqual(data[key], expected[key], key)
+        self.assertEqual(
+            [row["size_name"] for row in data["comparison"]],
+            [s["size_name"] for s in sizing.DEFAULT_SIZES],
+        )
+
+    def test_la_respuesta_no_trae_centimetros(self):
+        data = self.post({**VALID_POST, "chest_cm": "100"}).json()
+        for row in data["comparison"]:
+            self.assertEqual(set(row), {"size_name", "verdict"})
+
+    def test_campos_opcionales_vacios_son_sin_dato(self):
+        data = self.post({**VALID_POST, "chest_cm": "", "waist_cm": "   "}).json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["confidence"], "media")
+
+    def test_cinta_de_pecho_sube_la_confianza(self):
+        data = self.post({**VALID_POST, "chest_cm": "100"}).json()
+        self.assertEqual(data["confidence"], "alta")
+
+    def test_acepta_coma_decimal(self):
+        data = self.post({**VALID_POST, "weight_kg": "71,5"}).json()
+        self.assertTrue(data["ok"])
+
+    def test_campo_obligatorio_vacio_es_error_json(self):
+        for field in ["height_cm", "weight_kg", "build", "fit"]:
+            with self.subTest(field=field):
+                response = self.post({**VALID_POST, field: ""})
+                self.assertEqual(response.status_code, 400)
+                data = response.json()
+                self.assertFalse(data["ok"])
+                self.assertEqual(data["field"], field)
+                self.assertTrue(data["error"])
+
+    def test_campo_que_falta_del_todo_es_error_json(self):
+        data = {k: v for k, v in VALID_POST.items() if k != "height_cm"}
+        response = self.post(data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["field"], "height_cm")
+
+    def test_datos_invalidos_devuelven_error_json_no_500(self):
+        cases = [
+            ("weight_kg", "abc"),
+            ("height_cm", "999"),
+            ("chest_cm", "10"),
+            ("build", "gigante"),
+            ("fit", "ajustado"),  # no permitido en oversize (corte de DEFAULT_SIZES)
+        ]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                response = self.post({**VALID_POST, field: value})
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()["field"], field)
+
+    def test_get_no_esta_permitido(self):
+        response = self.client.get(self.url, VALID_POST)
+        self.assertEqual(response.status_code, 405)
+
+    def test_exige_csrf(self):
+        strict = Client(enforce_csrf_checks=True)
+        response = strict.post(self.url, VALID_POST)
+        self.assertEqual(response.status_code, 403)
+
+    def test_producto_inexistente_o_no_disponible(self):
+        hidden = Product.objects.create(
+            category=self.remeras, name="Oculta", slug="oculta", price=1000, available=False
+        )
+        for slug in ["no-existe", hidden.slug]:
+            with self.subTest(slug=slug):
+                url = reverse("products:recommend_size", args=[slug])
+                response = self.post(VALID_POST, url=url)
+                self.assertEqual(response.status_code, 404)
+                self.assertFalse(response.json()["ok"])
+
+    def test_categoria_sin_tipo_de_prenda_es_error_json(self):
+        gorras = Category.objects.create(name="Gorras", slug="gorras")
+        gorra = Product.objects.create(category=gorras, name="Gorra", slug="gorra", price=1000)
+        sell(gorra, "M")
+        url = reverse("products:recommend_size", args=[gorra.slug])
+        response = self.post(VALID_POST, url=url)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+
+    def test_tipo_de_prenda_sale_de_la_categoria(self):
+        buzos = Category.objects.create(name="Buzos", slug="buzos")
+        buzo = Product.objects.create(category=buzos, name="Buzo", slug="buzo", price=1000)
+        sell(buzo, *ALL_DEFAULT_NAMES)
+        url = reverse("products:recommend_size", args=[buzo.slug])
+        body = {**VALID_POST, "chest_cm": "100"}
+        remera_data = self.post(body).json()
+        buzo_data = self.post(body, url=url).json()
+        self.assertNotEqual(remera_data["comparison"], buzo_data["comparison"])
+
+    def test_no_guarda_nada(self):
+        before = count_all_rows()
+        self.post({**VALID_POST, "chest_cm": "100", "waist_cm": "90"})
+        self.assertEqual(count_all_rows(), before)
+        self.assertEqual(dict(self.client.session), {})
+
+    def test_no_registra_los_datos_en_los_logs(self):
+        # Valores raros a propósito, para buscarlos en los mensajes.
+        secret = {"height_cm": "173.7", "weight_kg": "71.3", "chest_cm": "99.1", "waist_cm": "88.9"}
+        with CaptureLogs() as logs:
+            self.post({**VALID_POST, **secret})
+            self.post({**VALID_POST, **secret, "fit": "ajustado"})  # también en un error
+        for message in logs.messages:
+            for value in secret.values():
+                self.assertNotIn(value, message)
+
+
+class RecommendViewWithMeasurementsTests(TestCase):
+    """De dónde salen los talles, el corte y la elasticidad."""
+
+    def setUp(self):
+        remeras = Category.objects.create(name="Remeras", slug="remeras")
+        self.product = Product.objects.create(
+            category=remeras, name="Remera medida", slug="remera-medida", price=1000
+        )
+        self.url = reverse("products:recommend_size", args=[self.product.slug])
+        self.s = Size.objects.create(name="S")
+        self.m = Size.objects.create(name="M")
+        self.product.sizes.add(self.s, self.m)
+
+    def add_measure(self, size, chest, fit_style="regular", stretch_level="none"):
+        ProductMeasurementDetail.objects.create(
+            product=self.product, size=size, chest_width_cm=chest, total_length_cm=70,
+            shoulder_width_cm=50, fit_style=fit_style, stretch_level=stretch_level,
+        )
+
+    def test_usa_las_medidas_propias_de_la_prenda(self):
+        self.add_measure(self.s, 50)
+        self.add_measure(self.m, 53)
+        data = self.client.post(self.url, {**VALID_POST, "chest_cm": "100"}).json()
+        self.assertTrue(data["ok"])
+        self.assertEqual([row["size_name"] for row in data["comparison"]], ["S", "M"])
+
+    def test_corte_sale_del_primer_talle_con_medidas(self):
+        # Corte regular: "ajustado" está permitido (en oversize no lo estaría).
+        self.add_measure(self.s, 50, fit_style="regular")
+        response = self.client.post(self.url, {**VALID_POST, "fit": "ajustado"})
+        self.assertEqual(response.status_code, 200)
+
+    def test_la_plantilla_manda_sobre_las_medidas_propias(self):
+        template = SizeTemplate.objects.create(name="Plantilla slim", fit_style="slim", stretch_level="none")
+        SizeTemplateItem.objects.create(
+            template=template, size=self.m, chest_width_cm=53, total_length_cm=70, shoulder_width_cm=50
+        )
+        self.product.size_template = template
+        self.product.save()
+        self.add_measure(self.s, 50, fit_style="oversize")
+        # Si mandara la medida propia (oversize), "holgado" estaría permitido. En slim, no.
+        response = self.client.post(self.url, {**VALID_POST, "fit": "holgado"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["field"], "fit")
+
+
+class SoldSizesTests(TestCase):
+    """Solo se comparan los talles que la prenda vende (los del selector)."""
+
+    def setUp(self):
+        self.remeras = Category.objects.create(name="Remeras", slug="remeras")
+
+    def make(self, slug, *sold):
+        product = Product.objects.create(category=self.remeras, name=slug, slug=slug, price=1000)
+        sell(product, *sold)
+        return product
+
+    def post(self, product, data):
+        return self.client.post(reverse("products:recommend_size", args=[product.slug]), data)
+
+    def widget(self, product):
+        return self.client.get(reverse("products:detail", args=[product.slug])).context["size_widget"]
+
+    def test_solo_compara_los_talles_que_vende_sin_distinguir_mayusculas(self):
+        # Nombres en minúscula y con espacios a propósito.
+        partial = self.make("vende-s-y-m", "s", " m ")
+        data = self.post(partial, {**VALID_POST, "chest_cm": "100"}).json()
+        self.assertEqual([row["size_name"] for row in data["comparison"]], ["S", "M"])
+
+    def test_no_recomienda_un_talle_que_no_vende(self):
+        # Con todos los talles a la venta, este cuerpo y calce dan L.
+        body = {**VALID_POST, "chest_cm": "100", "fit": "holgado"}
+        full = self.make("vende-todo", *ALL_DEFAULT_NAMES)
+        self.assertEqual(self.post(full, body).json()["recommended"], "L")
+        # Si la prenda solo vende S y M, no se fuerza otro talle.
+        partial = self.make("vende-s-y-m", "S", "M")
+        data = self.post(partial, body).json()
+        self.assertIsNone(data["recommended"])
+        self.assertEqual(data["reason"], "cuerpo_mayor")
+
+    def test_filtra_tambien_las_medidas_propias(self):
+        product = self.make("medida-propia", "M")
+        for name, chest in [("S", 50), ("M", 53)]:
+            ProductMeasurementDetail.objects.create(
+                product=product, size=Size.objects.get_or_create(name=name)[0],
+                chest_width_cm=chest, total_length_cm=70, shoulder_width_cm=50,
+            )
+        data = self.post(product, VALID_POST).json()
+        self.assertEqual([row["size_name"] for row in data["comparison"]], ["M"])
+
+    def test_prenda_que_no_vende_ningun_talle_no_muestra_el_bloque(self):
+        product = self.make("sin-talles")
+        self.assertIsNone(self.widget(product))
+        response = self.post(product, VALID_POST)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+
+    def test_ningun_talle_a_la_venta_tiene_medidas_no_muestra_el_bloque(self):
+        # Medida cargada solo para S, pero la prenda vende solo M.
+        product = self.make("medida-de-otro-talle", "M")
+        ProductMeasurementDetail.objects.create(
+            product=product, size=Size.objects.get_or_create(name="S")[0],
+            chest_width_cm=52, total_length_cm=70, shoulder_width_cm=50,
+        )
+        self.assertIsNone(self.widget(product))
+        self.assertEqual(self.post(product, VALID_POST).status_code, 400)
+
+
+class DetailSizeWidgetTests(TestCase):
+    """Qué recibe la página de la prenda para dibujar el bloque "Tu talle"."""
+
+    def make_product(self, slug, sold=tuple(ALL_DEFAULT_NAMES)):
+        category = Category.objects.create(name=slug, slug=slug)
+        product = Product.objects.create(category=category, name="P", slug=f"p-{slug}", price=1000)
+        sell(product, *sold)
+        return product
+
+    def get_widget(self, product):
+        response = self.client.get(reverse("products:detail", args=[product.slug]))
+        self.assertEqual(response.status_code, 200)
+        return response.context["size_widget"]
+
+    def test_categoria_sin_tipo_no_muestra_el_bloque(self):
+        self.assertIsNone(self.get_widget(self.make_product("gorras")))
+
+    def test_categoria_con_tipo_ofrece_los_calces_del_corte(self):
+        widget = self.get_widget(self.make_product("remeras"))
+        fits, default = allowed_fits(sizing.DEFAULT_FIT_STYLE)
+        self.assertEqual(widget["fits"], fits)
+        self.assertEqual(widget["default_fit"], default)
+        self.assertFalse(widget["calibrated"])
