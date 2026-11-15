@@ -1,0 +1,159 @@
+{% comment %}
+Bloque "Tu talle". Se incluye desde detail.html solo si size_widget no es None.
+Necesita en el contexto: product, size_widget (fits, default_fit, calibrated).
+La lógica está en static/js/size-finder.js.
+{% endcomment %}
+<section id="size-finder" class="border border-dark p-3 mb-4"
+         data-url="{% url 'products:recommend_size' product.slug %}"
+         data-default-fit="{{ size_widget.default_fit }}">
+    <h2 class="fw-bold text-uppercase small mb-3">Tu talle</h2>
+
+    <form id="sfForm" novalidate>
+        {% csrf_token %}
+
+        <!-- Altura y peso -->
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <label for="sfHeight" class="form-label small fw-bold mb-1">Altura (cm)</label>
+                <input type="text" inputmode="decimal" autocomplete="off" class="form-control rounded-0"
+                       id="sfHeight" name="height_cm" placeholder="Ej: 175">
+                <div class="invalid-feedback" data-error-for="height_cm"></div>
+            </div>
+            <div class="col-6">
+                <label for="sfWeight" class="form-label small fw-bold mb-1">Peso (kg)</label>
+                <input type="text" inputmode="decimal" autocomplete="off" class="form-control rounded-0"
+                       id="sfWeight" name="weight_kg" placeholder="Ej: 75">
+                <div class="invalid-feedback" data-error-for="weight_kg"></div>
+            </div>
+        </div>
+
+        <!-- Silueta de contextura (dibujos provisorios: torso de frente, sin cara) -->
+        <fieldset class="mb-3">
+            <legend class="form-label small fw-bold mb-1">Contextura</legend>
+            <div class="row g-2 sf-builds">
+                <div class="col-3">
+                    <input type="radio" class="btn-check" name="build" id="sfBuildDelgado" value="delgado">
+                    <label class="btn btn-outline-dark rounded-0 w-100 h-100 p-1 d-flex flex-column align-items-center" for="sfBuildDelgado">
+                        <svg viewBox="0 0 100 110" width="56" height="62" aria-hidden="true">
+                            <path d="M44 4 L44 14 C38 16 32 17 28 22 L32 42 L36 104 L64 104 L68 42 L72 22 C68 17 62 16 56 14 L56 4"
+                                  fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="small fw-bold">Delgado</span>
+                        <span class="sf-build-desc text-wrap">Hombros y pecho angostos</span>
+                    </label>
+                </div>
+                <div class="col-3">
+                    <input type="radio" class="btn-check" name="build" id="sfBuildMedio" value="medio">
+                    <label class="btn btn-outline-dark rounded-0 w-100 h-100 p-1 d-flex flex-column align-items-center" for="sfBuildMedio">
+                        <svg viewBox="0 0 100 110" width="56" height="62" aria-hidden="true">
+                            <path d="M44 4 L44 14 C36 16 26 17 20 22 L26 42 L30 104 L70 104 L74 42 L80 22 C74 17 64 16 56 14 L56 4"
+                                  fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="small fw-bold">Medio</span>
+                    </label>
+                </div>
+                <div class="col-3">
+                    <input type="radio" class="btn-check" name="build" id="sfBuildAtletico" value="atletico">
+                    <label class="btn btn-outline-dark rounded-0 w-100 h-100 p-1 d-flex flex-column align-items-center" for="sfBuildAtletico">
+                        <svg viewBox="0 0 100 110" width="56" height="62" aria-hidden="true">
+                            <path d="M44 4 L44 14 C32 15 18 16 10 22 L20 44 L34 104 L66 104 L80 44 L90 22 C82 16 68 15 56 14 L56 4"
+                                  fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="small fw-bold">Atlético</span>
+                        <span class="sf-build-desc text-wrap">Espalda ancha, cintura más angosta</span>
+                    </label>
+                </div>
+                <div class="col-3">
+                    <input type="radio" class="btn-check" name="build" id="sfBuildRobusto" value="robusto">
+                    <label class="btn btn-outline-dark rounded-0 w-100 h-100 p-1 d-flex flex-column align-items-center" for="sfBuildRobusto">
+                        <svg viewBox="0 0 100 110" width="56" height="62" aria-hidden="true">
+                            <path d="M44 4 L44 14 C36 16 24 17 18 22 L18 42 Q8 74 18 104 L82 104 Q92 74 82 42 L82 22 C76 17 64 16 56 14 L56 4"
+                                  fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="small fw-bold">Robusto</span>
+                        <span class="sf-build-desc text-wrap">Torso ancho</span>
+                    </label>
+                </div>
+            </div>
+            <div class="small text-danger mt-1 d-none" data-error-for="build"></div>
+        </fieldset>
+
+        <!-- Calce: solo los permitidos para el corte de esta prenda -->
+        <fieldset class="mb-3">
+            <legend class="form-label small fw-bold mb-1">¿Cómo te gusta que te quede?</legend>
+            <div class="d-flex gap-2 flex-wrap">
+                {% for fit in size_widget.fits %}
+                <input type="radio" class="btn-check" name="fit" id="sfFit-{{ fit }}" value="{{ fit }}"
+                       {% if fit == size_widget.default_fit %}checked{% endif %}>
+                <label class="btn btn-outline-dark rounded-0 fw-bold" for="sfFit-{{ fit }}">{{ fit|capfirst }}</label>
+                {% endfor %}
+            </div>
+            <div class="small text-danger mt-1 d-none" data-error-for="fit"></div>
+        </fieldset>
+
+        <!-- Precisión máxima (opcional) -->
+        <button class="btn btn-link text-dark p-0 small fw-bold mb-2" type="button"
+                data-bs-toggle="collapse" data-bs-target="#sfPrecision"
+                aria-expanded="false" aria-controls="sfPrecision">
+            + Precisión máxima (opcional)
+        </button>
+        <div class="collapse" id="sfPrecision">
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label for="sfChest" class="form-label small fw-bold mb-1">Pecho (cm)</label>
+                    <input type="text" inputmode="decimal" autocomplete="off" class="form-control rounded-0"
+                           id="sfChest" name="chest_cm" aria-describedby="sfChestHelp">
+                    <div class="invalid-feedback" data-error-for="chest_cm"></div>
+                    <div id="sfChestHelp" class="form-text">
+                        Cinta horizontal por la parte más ancha del pecho, debajo de las axilas.
+                        Sin apretar y sin ropa gruesa.
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label for="sfWaist" class="form-label small fw-bold mb-1">Cintura (cm)</label>
+                    <input type="text" inputmode="decimal" autocomplete="off" class="form-control rounded-0"
+                           id="sfWaist" name="waist_cm" aria-describedby="sfWaistHelp">
+                    <div class="invalid-feedback" data-error-for="waist_cm"></div>
+                    <div id="sfWaistHelp" class="form-text">
+                        Cinta horizontal a la altura del ombligo.
+                        Sin apretar y sin ropa gruesa.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid">
+            <button type="submit" id="sfSubmit" class="btn btn-dark rounded-0 fw-bold text-uppercase">
+                Calcular mi talle
+            </button>
+        </div>
+        <div id="sfGeneralError" class="small text-danger mt-2 d-none" role="alert"></div>
+    </form>
+
+    <!-- Resultado (lo completa size-finder.js) -->
+    <div id="sfResult" class="mt-3 d-none" aria-live="polite">
+        <p id="sfHeadline" class="mb-1 fs-5"></p>
+        <p id="sfAlternative" class="mb-2 small"></p>
+        <ul id="sfRows" class="list-unstyled d-flex gap-2 flex-wrap mb-2"></ul>
+        <p id="sfConfidence" class="small text-muted mb-1"></p>
+        <p id="sfExtra" class="small mb-2"></p>
+        <button type="button" id="sfUseSize" class="btn btn-outline-dark rounded-0 btn-sm fw-bold d-none">
+            Usar este talle
+        </button>
+    </div>
+
+    <!-- Pie del bloque -->
+    <div class="mt-3 pt-2 border-top small text-muted">
+        {% if not size_widget.calibrated %}
+        <p id="sfTrialNote" class="mb-1">Recomendación en etapa de prueba: si tenés dudas, consultanos por WhatsApp.</p>
+        {% endif %}
+        <p class="mb-0">
+            Tus datos quedan guardados solo en este dispositivo.
+            <button type="button" id="sfClear" class="btn btn-link btn-sm p-0 align-baseline">Borrar mis datos</button>
+        </p>
+    </div>
+</section>
+
+<style>
+    #size-finder .sf-build-desc { font-size: 0.7rem; line-height: 1.1; }
+</style>

@@ -409,10 +409,16 @@ class ValidationTests(SimpleTestCase):
 class AllowedFitsTests(SimpleTestCase):
     # Caso 20
     def test_tabla_de_cortes(self):
-        self.assertEqual(allowed_fits("slim"), (["ajustado", "regular"], "ajustado"))
+        self.assertEqual(allowed_fits("slim"), (["ajustado", "regular"], "regular"))
         self.assertEqual(allowed_fits("regular"), (["ajustado", "regular", "holgado"], "regular"))
-        self.assertEqual(allowed_fits("oversize"), (["regular", "holgado"], "holgado"))
-        self.assertEqual(allowed_fits("boxy"), (["regular", "holgado"], "holgado"))
+        self.assertEqual(allowed_fits("oversize"), (["regular", "holgado"], "regular"))
+        self.assertEqual(allowed_fits("boxy"), (["regular", "holgado"], "regular"))
+
+    def test_el_preseleccionado_siempre_esta_entre_los_permitidos(self):
+        for fit_style in sizing.FIT_STYLE_OPTIONS:
+            with self.subTest(fit_style=fit_style):
+                fits, default = allowed_fits(fit_style)
+                self.assertIn(default, fits)
 
     def test_corte_inexistente(self):
         with self.assertRaises(ValueError):
@@ -421,7 +427,7 @@ class AllowedFitsTests(SimpleTestCase):
     def test_no_se_puede_romper_la_tabla_desde_afuera(self):
         fits, _ = allowed_fits("slim")
         fits.append("holgado")
-        self.assertEqual(allowed_fits("slim"), (["ajustado", "regular"], "ajustado"))
+        self.assertEqual(allowed_fits("slim"), (["ajustado", "regular"], "regular"))
 
 
 # =============================================================================
@@ -737,3 +743,58 @@ class DetailSizeWidgetTests(TestCase):
         self.assertEqual(widget["fits"], fits)
         self.assertEqual(widget["default_fit"], default)
         self.assertFalse(widget["calibrated"])
+
+
+class DetailSizeFinderHtmlTests(TestCase):
+    """El HTML del bloque "Tu talle" en la página de la prenda."""
+
+    BLOCK = 'id="size-finder"'
+    SCRIPT = "js/size-finder.js"
+
+    def page(self, category_slug="remeras", sold=tuple(ALL_DEFAULT_NAMES)):
+        category = Category.objects.create(name=category_slug, slug=category_slug)
+        product = Product.objects.create(category=category, name="P", slug="p", price=1000)
+        sell(product, *sold)
+        return self.client.get(reverse("products:detail", args=[product.slug]))
+
+    def test_categoria_sin_tipo_no_muestra_el_bloque(self):
+        response = self.page("gorras")
+        self.assertNotContains(response, self.BLOCK)
+        self.assertNotContains(response, self.SCRIPT)
+
+    def test_prenda_sin_talles_no_muestra_el_bloque(self):
+        response = self.page(sold=())
+        self.assertNotContains(response, self.BLOCK)
+
+    def test_muestra_el_bloque_con_token_csrf_y_script(self):
+        response = self.page()
+        self.assertContains(response, self.BLOCK)
+        self.assertContains(response, "csrfmiddlewaretoken")
+        self.assertContains(response, self.SCRIPT)
+        self.assertContains(response, reverse("products:recommend_size", args=["p"]))
+
+    def test_solo_ofrece_los_calces_del_corte_con_el_preseleccionado(self):
+        response = self.page()
+        fits, default = allowed_fits(sizing.DEFAULT_FIT_STYLE)
+        for fit in ["ajustado", "regular", "holgado"]:
+            with self.subTest(fit=fit):
+                if fit in fits:
+                    self.assertContains(response, f'name="fit" id="sfFit-{fit}"')
+                else:
+                    self.assertNotContains(response, f'id="sfFit-{fit}"')
+        html = response.content.decode()
+        start = html.index(f'id="sfFit-{default}"')
+        self.assertIn("checked", html[start:html.index(">", start)])
+
+    def test_las_cuatro_siluetas(self):
+        response = self.page()
+        for build in BUILD_CHEST_ADJUST_CM:
+            with self.subTest(build=build):
+                self.assertContains(response, f'name="build" id="sfBuild{build.capitalize()}" value="{build}"')
+
+    def test_aviso_de_etapa_de_prueba_segun_calibrated(self):
+        self.assertContains(self.page(), 'id="sfTrialNote"')
+
+    def test_sin_aviso_de_prueba_si_esta_calibrado(self):
+        with patch.dict(sizing.CALIBRATED, {"remera": True}):
+            self.assertNotContains(self.page(), 'id="sfTrialNote"')

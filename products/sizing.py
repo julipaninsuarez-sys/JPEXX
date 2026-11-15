@@ -85,11 +85,14 @@ DEFAULT_SIZES = [
 # =============================================================================
 
 # Qué calces se ofrecen según el corte de la prenda: (calces permitidos, preseleccionado)
+# El preseleccionado es siempre "regular": con "holgado" preseleccionado en una
+# oversize que vende pocos talles, una persona promedio recibía "no hay talle"
+# sin haber elegido nada.
 FIT_STYLE_OPTIONS = {
-    "slim":     (["ajustado", "regular"], "ajustado"),
+    "slim":     (["ajustado", "regular"], "regular"),
     "regular":  (["ajustado", "regular", "holgado"], "regular"),
-    "oversize": (["regular", "holgado"], "holgado"),
-    "boxy":     (["regular", "holgado"], "holgado"),
+    "oversize": (["regular", "holgado"], "regular"),
+    "boxy":     (["regular", "holgado"], "regular"),
 }
 
 # Slug de la categoría -> tipo de prenda. Sumar un tipo nuevo = agregar una fila

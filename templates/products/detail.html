@@ -78,6 +78,11 @@
             </div>
             {% endif %}
 
+            <!-- Recomendador de talles: solo si la prenda tiene uno -->
+            {% if size_widget %}
+                {% include 'products/_size_finder.html' %}
+            {% endif %}
+
             <!-- Aviso si intenta agregar al carrito sin elegir talle -->
             <div id="cartValidationAlert" class="alert alert-warning rounded-0 py-2 small d-none mb-3">
                 Por favor, seleccioná un talle arriba antes de agregar la prenda al carrito.
@@ -187,4 +192,8 @@
 
     updateActionLinks();
 </script>
+{% if size_widget %}
+<!-- Va después del script de arriba porque usa su función selectSize -->
+<script src="{% static 'js/size-finder.js' %}"></script>
+{% endif %}
 {% endblock %}
