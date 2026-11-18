@@ -14,6 +14,13 @@
     root.style.setProperty('--hero-fade', fade + 'ms');
 
     function prepare(slide) {
+        // Primero los recortes de celu y tablet (<source> del <picture>), después la foto entera.
+        if (slide.parentNode && slide.parentNode.tagName === 'PICTURE') {
+            Array.prototype.forEach.call(slide.parentNode.querySelectorAll('source[data-srcset]'), function (source) {
+                source.srcset = source.dataset.srcset;
+                delete source.dataset.srcset;
+            });
+        }
         if (slide.dataset.src) {
             slide.src = slide.dataset.src;
             delete slide.dataset.src;
@@ -53,6 +60,10 @@
         if (!document.hidden) schedule();
     });
 
-    prepare(slides[1]).catch(function () {});
+    // La segunda foto se baja recién cuando terminó de cargar la página, para no competir
+    // con la primera (en el celu con datos eran 321 KB más de entrada).
+    function preloadNext() { prepare(slides[1]).catch(function () {}); }
+    if (document.readyState === 'complete') preloadNext();
+    else window.addEventListener('load', preloadNext, { once: true });
     schedule();
 })();

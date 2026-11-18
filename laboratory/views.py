@@ -38,6 +38,7 @@ def live_search_api(request):
             'price': str(getattr(prod, 'price', '')),
             'image_url': img_url or '',
             'lab_url': f"/lab/revelado/{prod.id}/",
+            'detail_url': f"/producto/{prod.slug}/",
         })
 
     return JsonResponse({'results': results})

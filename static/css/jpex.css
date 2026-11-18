@@ -524,7 +524,7 @@ button:focus-visible {
     .jpx-card:hover .jpx-card__cta { background: var(--accent); }
     .jpx-card:hover .jpx-card__cta span { transform: translateX(6px); }
 
-    .jpx-cat:hover {
+    .jpx-cat:not(.jpx-cat--soon):hover {
         transform: translate(-3px, -3px);
         box-shadow: 9px 9px 0 var(--ink);
     }
@@ -786,7 +786,8 @@ html { background-color: var(--ink); }
     }
     .jpx-cat__name { font-size: 1.8rem; margin: 0; }
     .jpx-cat__go { font-size: .9rem; }
-    .jpx-cat img { width: 32%; right: 30%; top: -40%; }
+    /* Entre el nombre y "Ver prendas", sin tapar ninguno de los dos. */
+    .jpx-cat img { width: 30%; right: 36%; top: -40%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -879,6 +880,10 @@ html { background-color: var(--ink); }
 .jpx-search__results > div { transition: background-color .15s ease; }
 .jpx-search__results > div:hover { background: #f5ecda; }
 .jpx-search__results img { background: transparent !important; border-color: var(--ink) !important; }
+/* La caja está dentro de la barra oscura (data-bs-theme="dark"): ahí .text-muted de Bootstrap es gris
+   claro, pensado para fondo negro, y sobre el hueso no se leía. --muted sobre --bone da 5,8:1. */
+.jpx-search__results .text-muted { color: var(--muted) !important; }
+.jpx-search__price { color: var(--ink); font-weight: 600; }
 .jpx-search__results .btn-dark {
     font-family: var(--font-label);
     font-weight: 700;

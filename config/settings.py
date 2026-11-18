@@ -63,12 +63,18 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'products.context_processors.contacto',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+
+# WhatsApp de la tienda: el pie, el carrito y el detalle lo toman de acá
+# (products/context_processors.py). Solo números, con código de país, para wa.me.
+JPEX_WHATSAPP = '5492213146934'
+JPEX_WHATSAPP_TEXTO = '+54 9 221 314-6934'
 
 
 # Database

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static jpex_precios %}
 
 {% block title %}JPEX Store — {{ product.name }}{% endblock %}
 
@@ -37,7 +37,7 @@
                 </div>
 
                 <h1 class="jpx-detail__title">{{ product.name }}</h1>
-                <p class="jpx-detail__price"><span>$</span>{{ product.price|floatformat:"0" }}</p>
+                <p class="jpx-detail__price"><span>$</span>{{ product.price|precio }}</p>
 
                 <p class="jpx-detail__desc">
                     {{ product.description|default:"Prenda de diseño exclusivo. Confeccionada con materiales de alta calidad, calce urbano y moderno." }}
@@ -99,7 +99,7 @@
                        target="_blank"
                        rel="noopener"
                        class="jpx-detail__btn jpx-detail__btn--wsp"
-                       data-base-url="https://wa.me/5492213146934?text=Hola!%20Quiero%20consultar%20por:%20{{ product.name|urlencode }}">
+                       data-base-url="https://wa.me/{{ JPEX_WHATSAPP }}?text=Hola!%20Quiero%20consultar%20por:%20{{ product.name|urlencode }}">
                         Comprar solo esta prenda por WhatsApp
                     </a>
 

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static jpex_fotos jpex_precios %}
 
 {% block title %}JPEX Store — Inicio{% endblock %}
 
@@ -8,10 +8,27 @@
 <section class="jpx-hero jpx-halftone">
     <!-- data-interval: cada cuánto cambia. data-fade: cuánto dura el fundido. En milisegundos. -->
     <div class="jpx-hero__slides" data-interval="8000" data-fade="2000" aria-hidden="true">
-        <img class="jpx-hero__slide is-active" src="{% static 'img/hero/carne-viva.webp' %}" alt="" fetchpriority="high">
-        <img class="jpx-hero__slide" data-src="{% static 'img/hero/lo-que-mira.webp' %}" alt="">
-        <img class="jpx-hero__slide" data-src="{% static 'img/hero/la-fosa.webp' %}" alt="">
-        <img class="jpx-hero__slide" data-src="{% static 'img/hero/grabado.webp' %}" alt="">
+        {# Celu y tablet bajan solo la franja del centro, que es lo único que se ve ahí (-540 y -800 son recortes de la original). #}
+        <picture>
+            <source media="(max-width: 575.98px)" srcset="{% static 'img/hero/carne-viva-540.webp' %}">
+            <source media="(max-width: 991.98px)" srcset="{% static 'img/hero/carne-viva-800.webp' %}">
+            <img class="jpx-hero__slide is-active" src="{% static 'img/hero/carne-viva.webp' %}" alt="" fetchpriority="high">
+        </picture>
+        <picture>
+            <source media="(max-width: 575.98px)" data-srcset="{% static 'img/hero/lo-que-mira-540.webp' %}">
+            <source media="(max-width: 991.98px)" data-srcset="{% static 'img/hero/lo-que-mira-800.webp' %}">
+            <img class="jpx-hero__slide" data-src="{% static 'img/hero/lo-que-mira.webp' %}" alt="">
+        </picture>
+        <picture>
+            <source media="(max-width: 575.98px)" data-srcset="{% static 'img/hero/la-fosa-540.webp' %}">
+            <source media="(max-width: 991.98px)" data-srcset="{% static 'img/hero/la-fosa-800.webp' %}">
+            <img class="jpx-hero__slide" data-src="{% static 'img/hero/la-fosa.webp' %}" alt="">
+        </picture>
+        <picture>
+            <source media="(max-width: 575.98px)" data-srcset="{% static 'img/hero/grabado-540.webp' %}">
+            <source media="(max-width: 991.98px)" data-srcset="{% static 'img/hero/grabado-800.webp' %}">
+            <img class="jpx-hero__slide" data-src="{% static 'img/hero/grabado.webp' %}" alt="">
+        </picture>
     </div>
     <div class="container py-5">
         <div class="row align-items-center g-5 py-lg-4">
@@ -30,14 +47,15 @@
                     <a class="jpx-fan-card" href="{% url 'products:detail' product.slug %}">
                         <div class="jpx-stage">
                             {% if product.image %}
-                                <img src="{{ product.stage_image_url }}" alt="{{ product.name }}">
+                                {# Prioridad baja: que el fondo del hero (lo primero que se ve) no comparta la conexión con estas. #}
+                                <img src="{{ product|foto_chica }}" alt="{{ product.name }}" fetchpriority="low" decoding="async">
                             {% else %}
                                 <span class="jpx-stage__noimg" aria-hidden="true">JPEX</span>
                             {% endif %}
                         </div>
                         <div class="jpx-fan-card__label">
                             <span>{{ product.name }}</span>
-                            <span>${{ product.price|floatformat:"-2" }}</span>
+                            <span>${{ product.price|precio }}</span>
                         </div>
                     </a>
                     {% endfor %}
@@ -72,17 +90,26 @@
     </div>
     <div class="jpx-cats">
         {% for category in categories %}
+        {% if category.available_count %}
         <a href="{% url 'products:catalog_by_category' category.slug %}" class="jpx-cat reveal">
             {% with cover=category.cover_product %}
                 {% if cover.image %}
-                <img src="{{ cover.image.url }}" alt="" loading="lazy" decoding="async">
+                <img src="{{ cover|foto_original_chica }}" alt="" loading="lazy" decoding="async">
                 {% endif %}
             {% endwith %}
             <h3 class="jpx-cat__name">{{ category.name }}</h3>
             <span class="jpx-cat__go">Ver prendas <span>&rarr;</span></span>
         </a>
+        {% else %}
+        {# Categoría sin prendas todavía: mismo bloque, sin link. #}
+        <div class="jpx-cat jpx-cat--soon reveal">
+            <h3 class="jpx-cat__name">{{ category.name }}</h3>
+            <span class="jpx-cat__go">Próximamente</span>
+        </div>
+        {% endif %}
         {% empty %}
-        <p class="text-muted">Todavía no hay categorías cargadas desde el administrador.</p>
+        {# Lo ve el cliente: nada de instrucciones para el dueño. #}
+        <p class="text-muted">Muy pronto, nuevas categorías.</p>
         {% endfor %}
     </div>
 </section>
@@ -101,10 +128,10 @@
         </div>
         {% empty %}
         <div class="col-12">
-            <div class="jpx-empty">Todavía no hay productos disponibles. Cargá tu primera prenda desde <strong>/admin/</strong>.</div>
+            <div class="jpx-empty">Muy pronto, nuevas prendas. Mientras tanto, escribinos por WhatsApp.</div>
         </div>
         {% endfor %}
     </div>
 </section>
-<script src="{% static 'js/hero-slides.js' %}" defer></script>
+<script src="{% static 'js/hero-slides.js' %}?v=3" defer></script>
 {% endblock %}

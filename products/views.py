@@ -1,10 +1,16 @@
+from django.db.models import Count, Q
 from django.shortcuts import render, get_object_or_404
 from .models import Category, Product
 
 
 def home(request):
-    categories = Category.objects.all()
-    available = Product.objects.filter(available=True).select_related('category')
+    # Se muestran todas las categorías; las que todavía no tienen prendas salen como
+    # "Próximamente" (sin link), para que se sepa que van a venir.
+    categories = Category.objects.annotate(
+        available_count=Count('products', filter=Q(products__available=True))
+    ).order_by('pk')
+    # prefetch_related('sizes'): los talles de todas las tarjetas en una sola consulta.
+    available = Product.objects.filter(available=True).select_related('category').prefetch_related('sizes')
     context = {
         'categories': categories,
         'featured_products': available[:4],
@@ -16,7 +22,7 @@ def home(request):
 
 def catalog(request, category_slug=None):
     categories = Category.objects.all()
-    products = Product.objects.filter(available=True).select_related('category')
+    products = Product.objects.filter(available=True).select_related('category').prefetch_related('sizes')
     current_category = None
 
     if category_slug:
@@ -36,7 +42,8 @@ def product_detail(request, slug):
     related_products = (
         Product.objects.filter(available=True, category=product.category)
         .exclude(pk=product.pk)
-        .select_related('category')[:4]
+        .select_related('category')
+        .prefetch_related('sizes')[:4]
     )
     context = {
         'product': product,

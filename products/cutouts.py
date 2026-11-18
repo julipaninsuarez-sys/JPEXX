@@ -14,7 +14,10 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 logger = logging.getLogger(__name__)
 
 CUTOUT_DIR = 'products/cutouts'
+SMALL_DIR = f'{CUTOUT_DIR}/chicas'
 MAX_SIDE = 1600
+# Tarjetas, abanico y portadas muestran la foto a ~180 px (×3 en el iPhone): con 540 de ancho alcanza.
+SMALL_WIDTH = 540
 WHITE_THRESHOLD = 40
 SENTINEL = (255, 0, 255)
 
@@ -59,6 +62,40 @@ def cutout_url(image_field):
         except OSError:
             logger.exception('No se pudo recortar %s', image_field.name)
             return image_field.url
+        storage.save(name, ContentFile(buffer.getvalue()))
+
+    return storage.url(name)
+
+
+def small_url(image_field, cutout=True):
+    """Copia chica (SMALL_WIDTH de ancho) para tarjetas y miniaturas, así el celu no baja
+    la foto de 1024 px para mostrarla chiquita. Con cutout=True parte de la foto sin fondo
+    (cutout_url); con cutout=False, de la original. Se genera la primera vez que se pide.
+    Si algo falla, devuelve la foto grande de siempre."""
+    storage = image_field.storage
+    base = os.path.basename(image_field.name)
+    kind = 'sinfondo' if cutout else 'original'
+    name = f'{SMALL_DIR}/{base}.{kind}-{SMALL_WIDTH}.webp'
+
+    if not storage.exists(name):
+        if cutout:
+            fallback = cutout_url(image_field)   # además deja hecha la foto sin fondo grande
+            source_name = f'{CUTOUT_DIR}/{base}.webp'
+        else:
+            fallback = image_field.url
+            source_name = image_field.name
+        try:
+            with storage.open(source_name, 'rb') as original:
+                source = Image.open(original)
+                source.load()
+            if source.width > SMALL_WIDTH:
+                height = round(source.height * SMALL_WIDTH / source.width)
+                source = source.resize((SMALL_WIDTH, height), Image.LANCZOS)
+            buffer = io.BytesIO()
+            source.save(buffer, 'WEBP', quality=82, method=4)
+        except OSError:
+            logger.exception('No se pudo achicar %s', source_name)
+            return fallback
         storage.save(name, ContentFile(buffer.getvalue()))
 
     return storage.url(name)
