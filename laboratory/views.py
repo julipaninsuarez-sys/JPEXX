@@ -161,3 +161,38 @@ def lab_view(request, product_id=None):
 def lab_sketches(request):
     """Página interna (fuera del menú) para probar variantes de las animaciones del fondo."""
     return render(request, 'laboratory/lab_bocetos.html')
+
+
+def _ultima_prueba_local():
+    """Busca la última prueba de IA guardada en esta compu (foto, prenda y resultado de la
+    misma sesión) para usarla de ejemplo en la sala de revelado."""
+    from django.conf import settings
+    media = settings.MEDIA_ROOT
+    results = media / 'laboratory' / 'results'
+    if not results.is_dir():
+        return {}
+    sesiones = []
+    for f in results.glob('tryon_session_*.png'):
+        n = f.stem.rsplit('_', 1)[-1]
+        if n.isdigit():
+            sesiones.append(int(n))
+    for n in sorted(sesiones, reverse=True):
+        user = media / 'laboratory' / 'temp' / f'user_{n}.jpg'
+        garment = media / 'laboratory' / 'temp' / f'garment_{n}.jpg'
+        if user.is_file() and garment.is_file():
+            base = settings.MEDIA_URL + 'laboratory/'
+            return {
+                'foto': f'{base}temp/user_{n}.jpg',
+                'prenda': f'{base}temp/garment_{n}.jpg',
+                'resultado': f'{base}results/tryon_session_{n}.png',
+                'numero': n,
+            }
+    return {}
+
+
+def lab_revelado(request):
+    """Sala de revelado (a donde lleva "Lab" en el menú). La foto de la persona y la prenda entran
+    a la máquina, la IA trabaja y sale un sobre con la foto revelada. Por ahora no llama a la IA:
+    simula la espera y muestra una prueba ya guardada. Conectarla al formulario y a la IA queda
+    para después."""
+    return render(request, 'laboratory/lab_revelado.html', {'ejemplo': _ultima_prueba_local()})

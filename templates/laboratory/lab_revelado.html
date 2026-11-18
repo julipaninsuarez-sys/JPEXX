@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}JPEX Store — Sala de revelado{% endblock %}
+
+{% block extra_head %}
+<link href="{% static 'css/lab-revelado.css' %}?v=3" rel="stylesheet">
+{% endblock %}
+
+{% block body_class %}jpx-lab-page jpx-rv-page{% endblock %}
+
+{% block content %}
+<section class="jpx-lab jpx-rv" id="jpx-rv" aria-label="Sala de revelado"
+         data-foto="{{ ejemplo.foto|default:'' }}"
+         data-prenda="{{ ejemplo.prenda|default:'' }}"
+         data-resultado="{{ ejemplo.resultado|default:'' }}"
+         data-numero="{{ ejemplo.numero|default:'1' }}">
+
+    {# La sala: foto de la máquina apagada + solo la luz que suma al encenderse, por zonas (encendida menos apagada). #}
+    <div class="jpx-rv__scene">
+        <img class="jpx-rv__bg" src="{% static 'img/lab/revelado/maquina-apagada.webp' %}" alt="" draggable="false">
+        <div class="jpx-rv__luz" aria-hidden="true">
+            <img data-z="resto" src="{% static 'img/lab/revelado/luz/resto.webp' %}" alt="" draggable="false">
+            <img data-z="pantallas" src="{% static 'img/lab/revelado/luz/pantallas.webp' %}" alt="" draggable="false">
+            <img data-z="ranuras" src="{% static 'img/lab/revelado/luz/ranuras.webp' %}" alt="" draggable="false">
+            <img data-z="tubo" src="{% static 'img/lab/revelado/luz/tubo.webp' %}" alt="" draggable="false">
+            <img data-z="camara" src="{% static 'img/lab/revelado/luz/camara.webp' %}" alt="" draggable="false">
+            <img data-z="bandeja" src="{% static 'img/lab/revelado/luz/bandeja.webp' %}" alt="" draggable="false">
+        </div>
+        <div class="jpx-rv__fog" aria-hidden="true"><i></i><i></i></div>
+
+        <div class="jpx-rv__screen jpx-rv__screen--l" aria-hidden="true"><span></span></div>
+        <div class="jpx-rv__screen jpx-rv__screen--r" aria-hidden="true"><span></span></div>
+        <div class="jpx-rv__slot jpx-rv__slot--l" aria-hidden="true"></div>
+        <div class="jpx-rv__slot jpx-rv__slot--r" aria-hidden="true"></div>
+
+        <div class="jpx-rv__chamber" aria-hidden="true">
+            {# Holograma con WebGL (si el navegador no puede, se usan las dos capas de abajo). #}
+            <canvas class="jpx-rv__gl"></canvas>
+            <div class="jpx-rv__holo jpx-rv__build"><div class="jpx-rv__build-in"><img class="jpx-rv__holo--persona" alt="" draggable="false"></div></div>
+            <div class="jpx-rv__holo jpx-rv__holo--prenda"><img alt="" draggable="false"></div>
+            <div class="jpx-rv__beams"></div>
+            <div class="jpx-rv__scanlines"></div>
+            <canvas class="jpx-rv__sparks"></canvas>
+            <div class="jpx-rv__flash"></div>
+        </div>
+        <div class="jpx-rv__ring jpx-rv__ring--top" aria-hidden="true"></div>
+        <div class="jpx-rv__ring jpx-rv__ring--bot" aria-hidden="true"></div>
+        <div class="jpx-rv__laser" aria-hidden="true"></div>
+
+        <div class="jpx-rv__outglow" aria-hidden="true"></div>
+        <div class="jpx-rv__out" aria-hidden="true"><div class="jpx-rv__mini"><b></b></div></div>
+    </div>
+    <div class="jpx-rv__dim" aria-hidden="true"></div>
+
+    {# 1) Arranque: la foto de la persona y la prenda elegida. #}
+    <div class="jpx-rv__start">
+        <p class="jpx-rv__kicker">Sala de revelado</p>
+        <h1 class="jpx-rv__title">Tu foto + la prenda</h1>
+        <div class="jpx-rv__cards">
+            <figure class="jpx-rv__card" data-card="foto"><img alt="Tu foto"><figcaption>Tu foto</figcaption></figure>
+            <span class="jpx-rv__plus" aria-hidden="true">+</span>
+            <figure class="jpx-rv__card" data-card="prenda"><img alt="La prenda"><figcaption>La prenda</figcaption></figure>
+        </div>
+        <button class="jpx-rv__go" type="button">Revelar</button>
+    </div>
+
+    {# 2) Mientras la IA trabaja. #}
+    <div class="jpx-rv__status" aria-live="polite">
+        <p class="jpx-rv__msg"></p>
+        <div class="jpx-rv__bar"><i></i></div>
+    </div>
+
+    {# 3) El sobre y la foto revelada. #}
+    <div class="jpx-rv__reveal" hidden>
+        <div class="jpx-env">
+            <div class="jpx-env__back"></div>
+            <div class="jpx-env__clip">
+                <div class="jpx-rv__print">
+                    <div class="jpx-rv__photo">
+                        <img class="jpx-rv__result" alt="Tu foto revelada con la prenda puesta" draggable="false">
+                        <div class="jpx-rv__before"><img alt="Tu foto original" draggable="false"></div>
+                        <div class="jpx-rv__handle" aria-hidden="true"></div>
+                        <div class="jpx-rv__devlayer" aria-hidden="true"></div>
+                    </div>
+                    <p class="jpx-rv__caption">JPEX · revelado Nº <span class="jpx-rv__num"></span></p>
+                </div>
+            </div>
+            <div class="jpx-env__front"></div>
+            <div class="jpx-env__flap"></div>
+            <button class="jpx-env__seal" type="button" aria-label="Abrir el sobre">J</button>
+        </div>
+        <p class="jpx-rv__tap">Tu revelado está listo · <b>tocá para abrirlo</b></p>
+        {# Cuando la foto sale del sobre se muda acá, al centro, con los botones abajo. #}
+        <div class="jpx-rv__final">
+            <div class="jpx-rv__actions">
+                <button type="button" class="jpx-rv__btn" data-act="antes">Antes / después</button>
+                <button type="button" class="jpx-rv__btn jpx-rv__btn--main" data-act="carrito">Agregar al carrito</button>
+                <button type="button" class="jpx-rv__btn" data-act="otra">Probar otra prenda</button>
+            </div>
+        </div>
+    </div>
+
+    {# Controles para probar tiempos: se ven solo con ?dev=1 en la dirección. #}
+    <aside class="jpx-rv__dev" aria-label="Controles de prueba" hidden>
+        <span>Boceto · la IA tarda</span>
+        <button type="button" data-ms="6000">6 s</button>
+        <button type="button" data-ms="12000" class="is-on">12 s</button>
+        <button type="button" data-ms="25000">25 s</button>
+        <button type="button" data-act="repetir">↺ Repetir</button>
+    </aside>
+</section>
+
+<script src="{% static 'js/lab-revelado.js' %}?v=3" defer></script>
+{% endblock %}
+
+{% block footer %}{% endblock %}

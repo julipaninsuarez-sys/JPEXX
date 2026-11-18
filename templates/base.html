@@ -22,7 +22,7 @@
         <span class="mx-2 d-none d-md-inline">|</span>
         <span class="d-none d-md-inline">📦 ENVÍOS A TODO EL PAÍS</span>
         <span class="mx-2">|</span>
-        <a href="{% url 'lab' %}" class="text-white text-decoration-underline fw-bold">
+        <a href="{% url 'lab_revelado' %}" class="text-white text-decoration-underline fw-bold">
             🧪 PROBATE LA ROPA CON IA EN JPEX LAB
         </a>
     </div>
@@ -63,7 +63,7 @@
                         <a class="nav-link {% if url_name == 'catalog' or url_name == 'catalog_by_category' %}active{% endif %}" {% if url_name == 'catalog' %}aria-current="page"{% endif %} href="{% url 'products:catalog' %}">Catálogo</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if url_name == 'lab' or url_name == 'lab_product' or url_name == 'lab_sketches' %}active{% endif %}" {% if url_name == 'lab' %}aria-current="page"{% endif %} href="{% url 'lab' %}">Lab</a>
+                        <a class="nav-link {% if url_name == 'lab_revelado' or url_name == 'lab' or url_name == 'lab_product' or url_name == 'lab_sketches' %}active{% endif %}" {% if url_name == 'lab_revelado' %}aria-current="page"{% endif %} href="{% url 'lab_revelado' %}">Lab</a>
                     </li>
                 </ul>
             </div>

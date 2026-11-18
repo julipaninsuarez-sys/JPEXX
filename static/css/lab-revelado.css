@@ -1,0 +1,732 @@
+/* Boceto: sala de revelado.
+ * La sala son dos fotos de la misma máquina (apagada y encendida, 1672×941). Todo lo que se
+ * anima va encima, posicionado en % de la foto, así queda pegado a su lugar en cualquier
+ * pantalla. Solo se animan transform / opacity (y un canvas chiquito para las chispas), para
+ * que ande liviano en celulares. */
+
+.jpx-rv {
+    --rv-red: #ff2a14;
+    --rv-glow: #ff5a44;
+    --rv-paper: #efe6d6;
+    --rv-ink: #0a0709;
+    background: var(--rv-ink);
+    color: #f3e9e4;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ---- La escena: misma proporción que la foto. En compu cubre todo ("cover"); en celular
+ * vertical se limita el zoom para que se vean la cámara y las dos ranuras de entrada. */
+.jpx-rv__scene {
+    --sw: max(100cqw, calc(100cqh * 1672 / 941));
+    --sw: min(max(100cqw, calc(100cqh * 1672 / 941)), 270cqw);
+    --u: calc(var(--sw) / 100);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--sw);
+    aspect-ratio: 1672 / 941;
+    transform: translate(-50%, -50%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+.jpx-rv__bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+/* ---- Encendido por zonas. Cada capa es solo la luz que agrega esa parte (fondo negro) y se
+ * SUMA a la foto apagada, así la sala no cambia: solo se prende la máquina, parte por parte. */
+.jpx-rv__luz { position: absolute; inset: 0; pointer-events: none; }
+.jpx-rv__luz img {
+    position: absolute;
+    display: block;
+    opacity: 0;
+    mix-blend-mode: screen;
+    mix-blend-mode: plus-lighter;
+    transition: opacity .7s ease;
+}
+/* Posición de cada recorte, en % de la foto (sale del script que las genera). */
+.jpx-rv__luz [data-z="resto"]     { left: 28.469%; top: .425%;   width: 43.062%; height: 99.044%; }
+.jpx-rv__luz [data-z="pantallas"] { left: 33.971%; top: 32.306%; width: 32.775%; height: 10.202%; }
+.jpx-rv__luz [data-z="ranuras"]   { left: 33.014%; top: 45.484%; width: 33.971%; height: 8.077%; }
+.jpx-rv__luz [data-z="tubo"]      { left: 46.651%; top: .425%;   width: 6.459%;  height: 22.529%; }
+.jpx-rv__luz [data-z="camara"]    { left: 41.388%; top: 20.829%; width: 17.464%; height: 42.933%; }
+.jpx-rv__luz [data-z="bandeja"]   { left: 40.431%; top: 63.762%; width: 19.139%; height: 13.177%; }
+
+/* Orden: las pantallas arrancan titilando como tubos, la corriente baja por el tubo de arriba,
+ * se prenden las ranuras, la cámara se llena de luz de abajo hacia arriba, y el resto (reflejos
+ * en el cuerpo y el piso) acompaña despacio. */
+.jpx-rv.is-lit .jpx-rv__luz img { opacity: 1; }
+.jpx-rv.is-lit .jpx-rv__luz [data-z="pantallas"] { animation: rv-tubo .9s linear both; }
+.jpx-rv.is-lit .jpx-rv__luz [data-z="tubo"]      { transition: opacity .5s ease .25s; }
+.jpx-rv.is-lit .jpx-rv__luz [data-z="ranuras"]   { animation: rv-tubo-suave .7s linear .35s both; }
+.jpx-rv.is-lit .jpx-rv__luz [data-z="bandeja"]   { transition: opacity .8s ease 1.1s; }
+.jpx-rv.is-lit .jpx-rv__luz [data-z="resto"]     { transition: opacity 1.8s cubic-bezier(.4, 0, .2, 1) .2s; }
+.jpx-rv__luz [data-z="camara"] {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 40%, #000 60%);
+    mask-image: linear-gradient(to bottom, transparent 40%, #000 60%);
+    -webkit-mask-size: 100% 250%;
+    mask-size: 100% 250%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: 0 100%;
+    mask-position: 0 100%;
+}
+/* La luz llena la cámara de abajo hacia arriba; mientras trabaja, respira un poco. */
+.jpx-rv.is-lit .jpx-rv__luz [data-z="camara"] { animation: rv-llenar 1.8s cubic-bezier(.45, 0, .35, 1) .45s both; }
+.jpx-rv.is-lit.is-processing .jpx-rv__luz [data-z="camara"] {
+    animation: rv-llenar 1.8s cubic-bezier(.45, 0, .35, 1) .45s both, rv-respira 2.6s ease-in-out 2s infinite alternate;
+}
+@keyframes rv-llenar {
+    from { -webkit-mask-position: 0 0; mask-position: 0 0; }
+    to { -webkit-mask-position: 0 100%; mask-position: 0 100%; }
+}
+@keyframes rv-tubo {
+    0% { opacity: 0; } 8% { opacity: .5; } 13% { opacity: .08; } 26% { opacity: .75; }
+    33% { opacity: .3; } 50% { opacity: .9; } 56% { opacity: .65; } 72%, 100% { opacity: 1; }
+}
+@keyframes rv-tubo-suave {
+    0% { opacity: 0; } 20% { opacity: .6; } 30% { opacity: .25; } 60%, 100% { opacity: 1; }
+}
+@keyframes rv-respira { from { opacity: 1; } to { opacity: .78; } }
+
+/* Niebla baja que se mueve despacio (gradientes, sin blur: liviano). */
+.jpx-rv__fog { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; overflow: hidden; pointer-events: none; }
+.jpx-rv__fog i {
+    position: absolute;
+    bottom: -20%;
+    left: -30%;
+    width: 160%;
+    height: 100%;
+    background:
+        radial-gradient(40% 50% at 30% 70%, rgba(255, 60, 40, .10), transparent 70%),
+        radial-gradient(35% 45% at 70% 80%, rgba(255, 90, 70, .08), transparent 70%);
+    animation: rv-fog 22s ease-in-out infinite alternate;
+}
+.jpx-rv__fog i + i { animation-duration: 31s; animation-direction: alternate-reverse; opacity: .8; }
+@keyframes rv-fog { from { transform: translateX(-6%); } to { transform: translateX(8%); } }
+
+/* ---- Pantallitas de la máquina */
+.jpx-rv__screen {
+    position: absolute;
+    top: 35.3%;
+    width: 3%;
+    height: 4.1%;
+    display: grid;
+    place-items: center;
+    font: 700 calc(var(--u) * .95) / 1 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color: #ffe1da;
+    text-shadow: 0 0 calc(var(--u) * .35) var(--rv-red), 0 0 calc(var(--u) * .8) var(--rv-red);
+    letter-spacing: .04em;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+}
+.jpx-rv__screen--l { left: 35.3%; }
+.jpx-rv__screen--r { left: 62%; }
+.jpx-rv.is-processing .jpx-rv__screen { opacity: 1; animation: rv-crt 3.2s steps(1) infinite; }
+@keyframes rv-crt { 0%, 100% { opacity: 1; } 47% { opacity: .7; } 49% { opacity: 1; } 83% { opacity: .85; } }
+
+/* ---- Ranuras de entrada: se encienden cuando entra una foto */
+.jpx-rv__slot {
+    position: absolute;
+    top: 47.6%;
+    width: 4.4%;
+    height: 2.1%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #fff1ec 20%, #fff 50%, #fff1ec 80%, transparent);
+    box-shadow: 0 0 calc(var(--u) * .8) var(--rv-glow), 0 0 calc(var(--u) * 2) var(--rv-red);
+    opacity: 0;
+    pointer-events: none;
+}
+.jpx-rv__slot--l { left: 34.1%; }
+.jpx-rv__slot--r { left: 61.6%; }
+.jpx-rv__slot.is-eat { animation: rv-eat .9s ease-out; }
+@keyframes rv-eat { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---- Cámara de vidrio: holograma de la persona que se arma de abajo hacia arriba */
+.jpx-rv__chamber {
+    position: absolute;
+    left: 43.7%;
+    top: 29.4%;
+    width: 13.1%;
+    height: 28.6%;
+    overflow: hidden;
+    border-radius: 8% / 3%;
+    pointer-events: none;
+}
+.jpx-rv__holo {
+    position: absolute;
+    display: block;
+    opacity: 0;
+    mix-blend-mode: screen;
+    transform-origin: 50% 100%;
+}
+/* Holograma de la persona. Se arma de abajo hacia arriba con dos capas que se deslizan en
+ * sentidos opuestos (solo transform: funciona en todos lados y es liviano). Queda en rojo
+ * parejo (gris + capa roja multiplicada) y la pared de atrás se desvanece hacia los bordes. */
+.jpx-rv__build {
+    inset: 2% 3% 0;
+    overflow: hidden;
+    isolation: isolate;
+    -webkit-mask-image: radial-gradient(ellipse 42% 54% at 50% 48%, #000 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 42% 54% at 50% 48%, #000 50%, transparent 100%);
+}
+.jpx-rv__build-in { position: absolute; inset: 0; }
+.jpx-rv__build-in::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #ff4a2e;
+    mix-blend-mode: multiply;
+}
+.jpx-rv__holo--persona {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: 50% 22%;
+    filter: grayscale(1) contrast(1.5) brightness(1.55);
+}
+.jpx-rv.is-processing .jpx-rv__holo--persona { animation: rv-glitch 2.9s steps(1) infinite; }
+/* La prenda viene con fondo blanco: invertida y en "screen" el fondo desaparece y queda la
+ * silueta brillando. */
+.jpx-rv__holo--prenda {
+    left: 22%;
+    top: 22%;
+    width: 56%;
+    isolation: isolate;
+}
+.jpx-rv__holo--prenda img { display: block; width: 100%; height: auto; filter: invert(1) grayscale(1) contrast(1.6); }
+.jpx-rv__holo--prenda::after { content: ""; position: absolute; inset: 0; background: #ff5236; mix-blend-mode: multiply; }
+/* La ventana sube (de abajo hacia arriba) y la figura baja lo mismo: queda quieta y se va
+ * descubriendo a la altura del anillo láser. */
+@keyframes rv-build {
+    0% { opacity: 1; transform: translateY(100%); }
+    55% { opacity: 1; transform: translateY(0); }
+    62% { opacity: .5; }
+    66%, 100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes rv-build-in {
+    0% { transform: translateY(-100%); }
+    55%, 100% { transform: translateY(0); }
+}
+@keyframes rv-glitch {
+    0%, 100% { transform: none; }
+    31% { transform: translateX(3%); }
+    33% { transform: none; }
+    71% { transform: translateX(-2%) skewX(4deg); }
+    72.5% { transform: none; }
+}
+@keyframes rv-merge {
+    0%, 40% { opacity: 0; transform: translateY(-70%) scale(.9); }
+    62% { opacity: .9; transform: translateY(0) scale(1); }
+    74% { opacity: .9; transform: translateY(0) scale(1); }
+    90%, 100% { opacity: 0; transform: translateY(0) scale(1.06); }
+}
+/* Holograma con WebGL: lienzo negro sumado con "screen" (el negro no cambia nada). Si anda,
+ * se esconden las capas de respaldo. */
+.jpx-rv__gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; }
+.jpx-rv:not(.has-gl) .jpx-rv__gl,
+.jpx-rv.has-gl .jpx-rv__build,
+.jpx-rv.has-gl .jpx-rv__holo--prenda { display: none; }
+
+/* Rayos verticales que titilan y líneas de escaneo */
+.jpx-rv__beams {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: repeating-linear-gradient(90deg, transparent 0 9%, rgba(255, 70, 50, .35) 9.4%, transparent 10.2%);
+}
+.jpx-rv.is-processing .jpx-rv__beams { animation: rv-beams 1.7s steps(6) infinite; }
+@keyframes rv-beams { 0%, 100% { opacity: .15; } 30% { opacity: .5; } 55% { opacity: .2; } 80% { opacity: .45; } }
+.jpx-rv__scanlines {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .45) 0 1px, transparent 1px 3px);
+}
+.jpx-rv.is-processing .jpx-rv__scanlines { opacity: .55; }
+.jpx-rv__sparks { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jpx-rv__flash {
+    position: absolute;
+    inset: -10%;
+    background: radial-gradient(closest-side, #fff, #ffb3a6 35%, rgba(255, 42, 20, .6) 60%, transparent);
+    opacity: 0;
+}
+.jpx-rv__chamber.is-flash .jpx-rv__flash { animation: rv-flash .9s ease-out; }
+@keyframes rv-flash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+/* Al terminar, el holograma se aplasta hacia abajo (como si se imprimiera en una hoja). */
+.jpx-rv__chamber.is-collapse .jpx-rv__holo {
+    animation: none !important;
+    transition: transform .55s cubic-bezier(.6, 0, .9, .4), opacity .55s;
+    transform: scaleY(.015) !important;
+    opacity: 0 !important;
+}
+.jpx-rv__chamber.is-collapse .jpx-rv__build { opacity: .9 !important; }
+.jpx-rv__chamber.is-collapse .jpx-rv__build-in,
+.jpx-rv__chamber.is-collapse .jpx-rv__holo--persona { animation: none; transform: none; }
+
+/* ---- Anillos arriba y abajo de la cámara, y el anillo láser que la recorre */
+.jpx-rv__ring {
+    position: absolute;
+    left: 43.3%;
+    width: 13.6%;
+    height: 2.8%;
+    border-radius: 50%;
+    border: calc(var(--u) * .14) solid #ffd2c8;
+    box-shadow: 0 0 calc(var(--u) * .6) var(--rv-glow), inset 0 0 calc(var(--u) * .5) var(--rv-glow);
+    opacity: 0;
+    pointer-events: none;
+}
+.jpx-rv__ring--top { top: 27.3%; }
+.jpx-rv__ring--bot { top: 56.5%; }
+.jpx-rv.is-processing .jpx-rv__ring { animation: rv-ring 1.2s ease-in-out infinite alternate; }
+.jpx-rv.is-processing .jpx-rv__ring--bot { animation-delay: -.6s; }
+@keyframes rv-ring { from { opacity: .25; } to { opacity: .95; } }
+
+.jpx-rv__laser {
+    position: absolute;
+    left: 43%;
+    width: 14.2%;
+    height: 2.4%;
+    top: 55.8%;
+    border-radius: 50%;
+    border: calc(var(--u) * .12) solid #fff;
+    box-shadow: 0 0 calc(var(--u) * .5) #fff, 0 0 calc(var(--u) * 1.2) var(--rv-glow), 0 0 calc(var(--u) * 2.6) var(--rv-red);
+    opacity: 0;
+    pointer-events: none;
+}
+/* Plano de luz del láser (un "corte" que barre la figura) */
+.jpx-rv__laser::after {
+    content: "";
+    position: absolute;
+    inset: 35% 2%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 220, 210, .55), rgba(255, 60, 40, .2) 70%, transparent);
+}
+/* Sube armando la figura (sincronizado con rv-build) y baja rápido. */
+/* El recorrido del láser, el armado de la figura y la prenda los mueve lab-revelado.js con un
+ * mismo reloj, así van sincronizados. */
+.jpx-rv.is-processing .jpx-rv__laser { opacity: .95; }
+@keyframes rv-laser {
+    0% { top: 55.8%; opacity: .95; }
+    55% { top: 27.9%; opacity: .95; }
+    62% { opacity: .3; }
+    88% { top: 55.8%; opacity: .5; }
+    100% { top: 55.8%; opacity: .95; }
+}
+
+/* ---- Salida: la ranura de abajo se enciende y sale un sobre chiquito a la bandeja */
+.jpx-rv__outglow {
+    position: absolute;
+    left: 46.3%;
+    top: 69.3%;
+    width: 7.6%;
+    height: 1.2%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #fff 25%, #fff 75%, transparent);
+    box-shadow: 0 0 calc(var(--u) * .9) var(--rv-glow), 0 0 calc(var(--u) * 2.4) var(--rv-red);
+    opacity: 0;
+    pointer-events: none;
+}
+.jpx-rv.is-printing .jpx-rv__outglow { animation: rv-out 1.5s ease-in-out; }
+@keyframes rv-out { 0% { opacity: 0; } 20%, 70% { opacity: 1; } 100% { opacity: .2; } }
+.jpx-rv__out {
+    position: absolute;
+    left: 46.5%;
+    top: 69.9%;
+    width: 7.2%;
+    height: 5.6%;
+    overflow: hidden;
+    pointer-events: none;
+}
+.jpx-rv__mini {
+    position: absolute;
+    left: 12%;
+    width: 76%;
+    aspect-ratio: 1.45;
+    top: 0;
+    border-radius: 2px;
+    background: linear-gradient(160deg, #f4ead8, #d9c7aa);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .6);
+    transform: translateY(-110%);
+    filter: brightness(.75) sepia(.4) saturate(1.6) hue-rotate(-12deg);
+}
+.jpx-rv__mini b {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 22%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 35% 35%, #c2241b, #6b0b07);
+}
+.jpx-rv.is-printing .jpx-rv__mini { transform: translateY(8%); transition: transform 1.3s cubic-bezier(.3, .7, .3, 1) .25s; }
+.jpx-rv.is-reveal .jpx-rv__mini { opacity: 0; transition: opacity .2s; }
+
+/* Oscurece la sala para que el sobre sea protagonista */
+.jpx-rv__dim {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(70% 60% at 50% 50%, rgba(10, 7, 9, .55), rgba(10, 7, 9, .88));
+    opacity: 0;
+    transition: opacity .8s ease;
+    pointer-events: none;
+}
+.jpx-rv.is-reveal .jpx-rv__dim { opacity: 1; }
+
+/* ---- Arranque */
+.jpx-rv__start {
+    position: absolute;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(440px, calc(100% - 32px));
+    padding: 14px 16px 16px;
+    border: 1px solid rgba(255, 90, 70, .35);
+    border-radius: 14px;
+    background: rgba(14, 6, 7, .72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    text-align: center;
+    transition: opacity .4s, transform .5s;
+}
+.jpx-rv.is-feeding .jpx-rv__start { opacity: 0; transform: translate(-50%, 20px); pointer-events: none; }
+.jpx-rv__kicker {
+    margin: 0;
+    font-size: .72rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: #ff8a78;
+}
+.jpx-rv__title { margin: 2px 0 10px; font-size: 1.15rem; font-weight: 700; color: #fff; }
+.jpx-rv__cards { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.jpx-rv__card { margin: 0; width: 96px; }
+.jpx-rv__card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #1b1012;
+    box-shadow: 0 0 0 1px rgba(255, 90, 70, .4), 0 6px 16px rgba(0, 0, 0, .5);
+}
+.jpx-rv__card[data-card="prenda"] img { object-fit: contain; background: #fff; }
+.jpx-rv__card figcaption { margin-top: 5px; font-size: .75rem; color: #e9cfc8; }
+.jpx-rv__plus { font-size: 1.4rem; color: #ff6a55; font-weight: 700; }
+.jpx-rv__go {
+    margin-top: 12px;
+    width: 100%;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ff3b22, #b3120a);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    box-shadow: 0 0 18px rgba(255, 42, 20, .45);
+    cursor: pointer;
+}
+.jpx-rv__go:active { transform: translateY(1px); }
+
+/* Copia de la foto que vuela a la ranura */
+.jpx-rv-fly {
+    position: fixed;
+    z-index: 60;
+    object-fit: cover;
+    border-radius: 6px;
+    pointer-events: none;
+    box-shadow: 0 0 16px rgba(255, 42, 20, .6);
+}
+
+/* ---- Estado mientras la IA trabaja */
+.jpx-rv__status {
+    position: absolute;
+    left: 50%;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(360px, calc(100% - 32px));
+    text-align: center;
+    opacity: 0;
+    transition: opacity .4s;
+    pointer-events: none;
+}
+.jpx-rv.is-processing .jpx-rv__status { opacity: 1; }
+.jpx-rv__msg {
+    min-height: 1.4em;
+    margin: 0 0 8px;
+    font: 600 .9rem/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color: #ffd9d2;
+    text-shadow: 0 0 10px rgba(255, 42, 20, .8);
+}
+.jpx-rv__msg.is-new { animation: rv-msg .45s ease-out; }
+@keyframes rv-msg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.jpx-rv__bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.jpx-rv__bar i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform-origin: left;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, #b3120a, #ff5a44, #fff);
+    box-shadow: 0 0 10px var(--rv-red);
+}
+
+/* ---- El sobre */
+.jpx-rv__reveal {
+    --P: min(74cqw, calc((100cqh - 200px) * .6), 360px);   /* ancho de la foto revelada */
+    --E: calc(var(--P) * 1.12);                             /* ancho del sobre */
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    perspective: 1200px;
+}
+.jpx-rv__reveal[hidden] { display: none; }
+.jpx-env {
+    position: relative;
+    width: var(--E);
+    aspect-ratio: 1.5;
+    transform-style: preserve-3d;
+    cursor: pointer;
+    filter: sepia(.25) saturate(1.3) brightness(.93) drop-shadow(0 18px 30px rgba(0, 0, 0, .7)) drop-shadow(0 0 30px rgba(255, 42, 20, .25));
+}
+.jpx-rv__reveal.is-sealed .jpx-env { animation: rv-bob 2.6s ease-in-out infinite; }
+@keyframes rv-bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+.jpx-env__back, .jpx-env__front, .jpx-env__flap {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background-color: var(--rv-paper);
+    background-image:
+        radial-gradient(120% 90% at 30% 20%, rgba(255, 255, 255, .5), transparent 60%),
+        radial-gradient(90% 70% at 80% 90%, rgba(120, 80, 40, .18), transparent 70%);
+}
+.jpx-env__back { top: 0; height: 100%; border-radius: 4px; filter: brightness(.82); z-index: 0; }
+.jpx-env__front {
+    top: 0;
+    height: 100%;
+    border-radius: 4px;
+    z-index: 3;
+    clip-path: polygon(0 0, 50% 54%, 100% 0, 100% 100%, 0 100%);
+    box-shadow: inset 0 -20px 30px rgba(120, 80, 40, .15);
+}
+.jpx-env__flap {
+    top: 0;
+    height: 60%;
+    z-index: 4;
+    transform-origin: 50% 0;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    filter: brightness(.95);
+    transition: transform .65s cubic-bezier(.5, 0, .3, 1), z-index 0s .3s;
+    backface-visibility: visible;
+}
+.jpx-env__seal {
+    position: absolute;
+    z-index: 5;
+    left: 50%;
+    top: 58%;
+    width: calc(var(--E) * .2);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border: 0;
+    border-radius: 50%;
+    padding: 0;
+    background: radial-gradient(circle at 35% 30%, #e0392c, #8c120c 55%, #4f0705);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, .45), inset 0 0 0 calc(var(--E) * .012) rgba(0, 0, 0, .25);
+    color: rgba(255, 220, 210, .85);
+    font: 700 calc(var(--E) * .09) / 1 Georgia, serif;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+    cursor: pointer;
+    transition: transform .4s cubic-bezier(.5, 0, .3, 1), opacity .4s;
+}
+.jpx-rv__reveal.is-sealed .jpx-env__seal { animation: rv-seal 2.6s ease-in-out infinite; }
+@keyframes rv-seal { 0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, .45), 0 0 0 0 rgba(255, 42, 20, .0); } 50% { box-shadow: 0 3px 8px rgba(0, 0, 0, .45), 0 0 0 10px rgba(255, 42, 20, .18); } }
+.jpx-rv__reveal.is-open .jpx-env__seal { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+.jpx-rv__reveal.is-open .jpx-env__flap { transform: rotateX(180deg); z-index: 1; }
+.jpx-rv__tap { margin: 0; font-size: .9rem; color: #f0d6cf; opacity: 0; transition: opacity .4s; text-align: center; padding: 0 16px; }
+.jpx-rv__tap b { color: #ff7a66; }
+.jpx-rv__reveal.is-sealed .jpx-rv__tap { opacity: 1; }
+/* Cuando la foto ya salió, el sobre se cae y desaparece */
+.jpx-rv__reveal.is-drop .jpx-env { transform: translateY(70cqh) rotate(-10deg); opacity: 0; transition: transform .9s cubic-bezier(.5, 0, .9, .5), opacity .9s; animation: none; }
+.jpx-rv__reveal.is-drop .jpx-rv__tap { display: none; }
+
+/* La foto, adentro del sobre: tapada por el bolsillo de adelante; sale hacia arriba. */
+.jpx-env__clip { position: absolute; inset: 0; z-index: 2; clip-path: inset(-400% -50% 0 -50%); }
+.jpx-env .jpx-rv__print {
+    position: absolute;
+    left: 50%;
+    top: 6%;
+    transform: translateX(-50%) scale(.84);
+    transform-origin: 50% 0;
+    transition: transform 1s cubic-bezier(.3, .7, .2, 1);
+}
+.jpx-rv__reveal.is-out .jpx-env .jpx-rv__print { transform: translateX(-50%) translateY(-42%) scale(.84); }
+
+.jpx-rv__print {
+    width: var(--P);
+    padding: calc(var(--P) * .045) calc(var(--P) * .045) 0;
+    background: #f7f2e8;
+    border-radius: 3px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .6);
+}
+.jpx-rv__photo {
+    --x: 0%;
+    position: relative;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: var(--rv-paper);
+    touch-action: pan-y;
+}
+.jpx-rv__photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.jpx-rv__before { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--x)) 0 0); }
+.jpx-rv__handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--x);
+    width: 2px;
+    margin-left: -1px;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(0, 0, 0, .6);
+    opacity: 0;
+    transition: opacity .3s;
+}
+.jpx-rv__handle::after {
+    content: "‹ ›";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #b3120a;
+    font-weight: 700;
+    font-size: 15px;
+}
+.jpx-rv__photo.is-compare { cursor: ew-resize; touch-action: none; }
+.jpx-rv__photo.is-compare .jpx-rv__handle { opacity: 1; }
+/* Revelado: el papel arranca en blanco bajo la luz roja y la imagen aparece de a poco. */
+.jpx-rv__devlayer {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(rgba(255, 40, 20, .28), rgba(255, 40, 20, .28)),
+        var(--rv-paper);
+}
+.jpx-rv__photo.is-developing .jpx-rv__devlayer { animation: rv-dev 3.6s cubic-bezier(.5, 0, .4, 1) forwards; }
+.jpx-rv__photo.is-developing .jpx-rv__result { animation: rv-dev-img 3.6s ease-out forwards; }
+@keyframes rv-dev { 0% { opacity: 1; } 15% { opacity: .92; } 100% { opacity: 0; } }
+@keyframes rv-dev-img {
+    0% { filter: sepia(1) saturate(4) hue-rotate(-25deg) brightness(1.7) contrast(.35); }
+    60% { filter: sepia(.6) saturate(2) hue-rotate(-15deg) brightness(1.15) contrast(.8); }
+    100% { filter: none; }
+}
+.jpx-rv__caption {
+    margin: 0;
+    padding: calc(var(--P) * .035) 0 calc(var(--P) * .045);
+    text-align: center;
+    font: italic 600 calc(var(--P) * .045) / 1.2 Georgia, serif;
+    color: #6b5a4a;
+}
+
+/* Botones finales */
+.jpx-rv__final {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    pointer-events: none;
+}
+.jpx-rv__final > * { pointer-events: auto; }
+.jpx-rv__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .5s, transform .5s;
+    pointer-events: none;
+}
+.jpx-rv__reveal.is-final .jpx-rv__actions { opacity: 1; transform: none; pointer-events: auto; }
+.jpx-rv__btn {
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 120, 100, .5);
+    border-radius: 999px;
+    background: rgba(20, 8, 9, .8);
+    color: #ffe6e0;
+    font-size: .85rem;
+    cursor: pointer;
+}
+.jpx-rv__btn--main { background: linear-gradient(180deg, #ff3b22, #b3120a); border-color: transparent; font-weight: 700; }
+.jpx-rv__toast {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(20, 8, 9, .92);
+    border: 1px solid rgba(255, 120, 100, .5);
+    font-size: .82rem;
+    z-index: 70;
+    animation: rv-msg .3s ease-out;
+}
+
+/* ---- Controles para probar tiempos (solo con ?dev=1) */
+.jpx-rv__dev[hidden] { display: none; }
+.jpx-rv__dev {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 50;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(100% - 20px);
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .6);
+    font-size: .72rem;
+    color: #d8c2bc;
+}
+.jpx-rv__dev button {
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 6px;
+    background: transparent;
+    color: #fff;
+    font-size: .72rem;
+    cursor: pointer;
+}
+.jpx-rv__dev button.is-on { background: #b3120a; border-color: #ff5a44; }
+
+@media (prefers-reduced-motion: reduce) {
+    .jpx-rv *, .jpx-rv *::before, .jpx-rv *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    .jpx-rv.is-processing .jpx-rv__build { opacity: .85; transform: none; }
+}
+
+/* Solo para revisar (?debug=1): holograma quieto y visible. */
+.jpx-rv.is-debug .jpx-rv__build, .jpx-rv.is-debug .jpx-rv__build-in { animation: none !important; opacity: .85 !important; transform: none !important; }
