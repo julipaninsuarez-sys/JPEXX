@@ -199,8 +199,9 @@ button:focus-visible {
     text-transform: uppercase;
     margin: .5rem 0 1.2rem;
 }
-.jpx-hero__title span {
+.jpx-hero__title .jpx-hero__outline {
     display: block;
+    width: fit-content;
     color: transparent;
     -webkit-text-stroke: 2px #fff;
 }

@@ -340,3 +340,40 @@
     .jpx-gal-wrap { height: 100%; }
     .jpx-gal-wrap > .jpx-detail__media { flex: 1; min-height: 0; }
 }
+
+/* ===== Brillo en el nombre (data-sk-brillo) =====
+ * "JPEX Store" del inicio y la marca JPEX del pie. Encima del texto va una copia roja
+ * (data-shine) que solo se ve por una franja que barre de izquierda a derecha.
+ * A: continuo, lento y apagado (basado en Shiny Pill). B: barre y descansa. */
+.jpx-shine { position: relative; display: inline-block; }
+html[data-sk-brillo] .jpx-shine::after {
+    content: attr(data-shine);
+    position: absolute;
+    inset: 0;
+    color: var(--shine-color);
+    -webkit-text-stroke-color: var(--shine-color);
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 22%, rgba(0, 0, 0, .35) 36%, #000 50%, rgba(0, 0, 0, .35) 64%, transparent 78%);
+    mask-image: linear-gradient(to right, transparent 22%, rgba(0, 0, 0, .35) 36%, #000 50%, rgba(0, 0, 0, .35) 64%, transparent 78%);
+    -webkit-mask-size: 150% 100%;
+    mask-size: 150% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    animation: var(--shine-anim) var(--shine-speed) ease-in-out infinite;
+}
+/* A: lento, suave y apagado (2026-11-16: Francisco lo pidió así; antes era 1,5 s y #ae120f8f). */
+html[data-sk-brillo="a"] { --shine-color: rgba(122, 24, 20, .5); --shine-speed: 4.5s; --shine-anim: jpx-shine; }
+html[data-sk-brillo="b"] { --shine-color: #d42a14; --shine-speed: 4s; --shine-anim: jpx-shine-pausa; }
+/* La marca del pie arranca un poco después, así no barren las dos a la vez. */
+html[data-sk-brillo] .jpx-footer__mark .jpx-shine::after { animation-delay: .6s; }
+@keyframes jpx-shine {
+    0% { -webkit-mask-position: 240% 0; mask-position: 240% 0; }
+    100% { -webkit-mask-position: -140% 0; mask-position: -140% 0; }
+}
+@keyframes jpx-shine-pausa {
+    0% { -webkit-mask-position: 240% 0; mask-position: 240% 0; }
+    45%, 100% { -webkit-mask-position: -140% 0; mask-position: -140% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    html[data-sk-brillo] .jpx-shine::after { animation: none; display: none; }
+}

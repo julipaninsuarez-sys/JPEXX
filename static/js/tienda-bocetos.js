@@ -45,16 +45,19 @@
           options: [[OFF, '—', 'No'], ['a', 'A', 'Barra con precio'], ['b', 'B', 'Botón flotante']] },
         { id: 'galeria', label: 'Galería de fotos (detalle)', hint: 'Ejemplo con la única foto que hay: frente, foto original y estampa de cerca. Cuando haya fotos de espalda, van ahí.',
           options: [[OFF, '—', 'No'], ['a', 'A', 'Abajo + lupa'], ['b', 'B', 'Al costado + lupa']] },
+        { id: 'brillo', label: 'Brillo en el nombre (inicio y pie)', hint: 'Un brillo rojo que barre "JPEX Store" arriba en el inicio y la marca JPEX de abajo de todo.',
+          options: [[OFF, '—', 'Sin brillo'], ['a', 'A', 'Continuo (como el ejemplo)'], ['b', 'B', 'Con pausa']] },
         { section: 'Probar' },
         { id: 'prueba', label: 'La cápsula con… (solo el número, no toca el carrito)', options: [['0', '0', ''], ['1', '1', ''], ['3', '3', ''], ['6', '6', 'prendas']] }
     ];
-    var STYLE_IDS = ['buscador', 'capsula', 'detalle', 'carrito', 'agregar', 'abrir', 'anuncios', 'fijo', 'galeria'];
+    var STYLE_IDS = ['buscador', 'capsula', 'detalle', 'carrito', 'agregar', 'abrir', 'anuncios', 'fijo', 'galeria', 'brillo'];
 
     // Variantes elegidas por Francisco y el equipo (2026-11-15): es lo que ve todo el mundo.
     // Con ?bocetos se puede probar otra cosa en este navegador, sin cambiar lo que ven los demás.
     var state = {
         buscador: 'a', capsula: 'b', detalle: 'a',
         carrito: 'a', agregar: 'a', abrir: 'si', anuncios: 'a', fijo: 'b', galeria: 'b',
+        brillo: 'a',   // 2026-11-16: Francisco trajo el efecto (Shiny Pill) para el nombre
         prueba: null, abierto: true
     };
     if (on) {
