@@ -1,12 +1,13 @@
-/* Boceto: sala de revelado.
+/* Sala de revelado (el probador del Lab).
  *
- * Recorrido: la foto de la persona y la prenda vuelan a las ranuras → la máquina se despierta →
- * en la cámara de vidrio se arma un holograma (mientras la IA trabaja; acá se simula con un
- * tiempo elegible) → se aplasta, destello, sale un sobre por abajo → el sobre viene al frente →
- * se toca, se abre, sale la foto, el sobre se cae → la foto se revela de a poco → botones.
+ * Recorrido: la persona completa el formulario (prenda, medidas y foto) y toca "Revelar" → su
+ * foto y la prenda vuelan a las ranuras → la máquina se enciende → en la cámara de vidrio se arma
+ * un holograma mientras la IA trabaja (se manda el formulario a lab_revelado_probar y se espera
+ * la respuesta) → se aplasta, destello, sale un sobre por abajo → el sobre viene al frente → se
+ * toca, se abre, sale la foto, el sobre se cae → la foto se revela de a poco → talle y botones.
+ * Si la IA no pudo, la máquina se apaga y se puede volver a intentar.
  *
- * En la página real, "esperar la IA" es esperar la respuesta del servidor; el resto es igual.
- * Imágenes: data-foto / data-prenda / data-resultado (o ?foto=&prenda=&resultado= en la URL).
+ * ?demo=trabajando|sobre|final simula la IA con una prueba ya guardada (data-foto/prenda/resultado).
  */
 (function () {
     'use strict';
@@ -24,6 +25,7 @@
             '"/><text x="50%" y="50%" fill="#ff8a78" font-family="sans-serif" font-size="22" text-anchor="middle">' + texto + '</text></svg>';
         return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     }
+    var demo = qs.get('demo');
     var SRC = {
         foto: qs.get('foto') || root.dataset.foto || relleno('tu foto', '#2a1416'),
         prenda: qs.get('prenda') || root.dataset.prenda || relleno('prenda', '#ffffff'),
@@ -43,15 +45,87 @@
     var bar = $('.jpx-rv__bar i');
     var screenL = $('.jpx-rv__screen--l span');
     var screenR = $('.jpx-rv__screen--r span');
-    var goBtn = $('.jpx-rv__go');
+    var form = $('#rvForm');
+    var goBtn = $('#rvForm .jpx-rv__go');
+    var fileInput = $('.jpx-rv__file');
+    var selPrenda = $('#rvPrenda');
+    var selTalle = $('#rvTalle');
+    var cardFoto = $('.jpx-rv__card[data-card="foto"]');
+    var formError = $('.jpx-rv__form-error');
+    var failBox = $('.jpx-rv__fail');
 
-    $('.jpx-rv__card[data-card="foto"] img').src = SRC.foto;
-    $('.jpx-rv__card[data-card="prenda"] img').src = SRC.prenda;
-    $('.jpx-rv__holo--persona').src = SRC.foto;
-    $('.jpx-rv__holo--prenda img').src = SRC.prenda;
-    $('.jpx-rv__result').src = SRC.resultado;
-    $('.jpx-rv__before img').src = SRC.foto;
-    $('.jpx-rv__num').textContent = String(root.dataset.numero || '1').padStart(4, '0');
+    // ------------------------------------------------------------------ 0) el formulario
+    function ponerFoto(url) {
+        $('.jpx-rv__card[data-card="foto"] img').src = url;
+        $('.jpx-rv__holo--persona').src = url;
+        $('.jpx-rv__before img').src = url;
+        cardFoto.classList.toggle('has-foto', !!url);
+    }
+    function ponerPrendaImg(url) {
+        $('.jpx-rv__card[data-card="prenda"] img').src = url;
+        $('.jpx-rv__holo--prenda img').src = url;
+    }
+    // Al cambiar de prenda: su foto en la tarjeta y sus talles en "Talle".
+    function elegirPrenda() {
+        var op = selPrenda && selPrenda.options[selPrenda.selectedIndex];
+        if (!op) return;
+        ponerPrendaImg(op.dataset.img || '');
+        var antes = selTalle.value !== 'auto' ? selTalle.value : (selTalle.dataset.pedido || 'auto');
+        selTalle.dataset.pedido = '';
+        selTalle.length = 1;
+        (op.dataset.talles || '').split(',').filter(Boolean).forEach(function (t) {
+            selTalle.add(new Option('Talle ' + t, t, false, t === antes));
+        });
+    }
+    // La foto se achica en el celu antes de mandarla (una de 12 MP pasa de ~4 MB a ~400 KB): sube
+    // mucho más rápido y la IA igual la usa a 1024 px. Dibujarla en un lienzo además la endereza.
+    function achicarFoto(file, max) {
+        return new Promise(function (ok) {
+            var url = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function () {
+                var k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+                var c = document.createElement('canvas');
+                c.width = Math.round(img.naturalWidth * k);
+                c.height = Math.round(img.naturalHeight * k);
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                URL.revokeObjectURL(url);
+                c.toBlob(function (b) { ok(b || file); }, 'image/jpeg', .9);
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); ok(file); };   // si no la puede leer, va tal cual
+            img.src = url;
+        });
+    }
+    var fotoBlob = null, fotoURL = '';
+    function avisarForm(texto) { formError.textContent = texto; formError.hidden = !texto; }
+
+    if (demo) {
+        ponerFoto(SRC.foto);
+        ponerPrendaImg(SRC.prenda);
+        fileInput.required = false;
+    } else if (selPrenda) {
+        elegirPrenda();
+        selPrenda.addEventListener('change', elegirPrenda);
+    }
+    // Lee la foto elegida (devuelve una promesa). Si la persona la eligió antes de que cargara
+    // esta página (conexión lenta), se lee igual al empezar o al tocar "Revelar".
+    var leyendo = null;
+    function leerFoto() {
+        var f = fileInput.files && fileInput.files[0];
+        if (!f) return Promise.resolve(false);
+        cardFoto.classList.remove('is-falta');
+        avisarForm('');
+        leyendo = achicarFoto(f, 1600).then(function (b) {
+            fotoBlob = b;
+            if (fotoURL) URL.revokeObjectURL(fotoURL);
+            fotoURL = URL.createObjectURL(b);
+            ponerFoto(fotoURL);
+            return true;
+        });
+        return leyendo;
+    }
+    fileInput.addEventListener('change', leerFoto);
+    if (!demo) leerFoto();
 
     var MENSAJES = [
         'Escaneando tu foto…',
@@ -62,7 +136,11 @@
         'Revelando…'
     ];
 
-    var esperaIA = 12000;          // el boceto simula lo que tarda la IA
+    var esperaIA = demo ? 12000 : 22000;   // lo que suele tardar la IA (en la demo, lo que se simula)
+    var MIN_HOLO = 6000;                    // el holograma necesita ~6 s para armarse entero
+    var respuesta = null;                   // promesa con lo que devuelve la IA
+    var vuelta = 0;                         // cambia al reiniciar: respuestas viejas se ignoran
+    var datos = null;                       // lo que devolvió la IA en esta vuelta
     var timers = [];
     var rafs = { prog: 0, sparks: 0 };
     var fase = 'inicio';
@@ -123,17 +201,96 @@
             root.classList.add('is-on', 'is-processing');
             empezarProgreso();
             chispas();
-            // Acá, en la página real, se espera la respuesta de la IA.
-            later(terminar, esperaIA);
+            esperarIA();
         }, 1250);
+    }
+
+    // Manda el formulario y devuelve una promesa con la respuesta (nunca falla: los errores vuelven
+    // como { ok: false, error }).
+    function pedirIA() {
+        var fd = new FormData(form);
+        fd.set('user_image', fotoBlob, fotoBlob.name || 'foto.jpg');
+        var ctrl = window.AbortController ? new AbortController() : null;
+        var corte = setTimeout(function () { if (ctrl) ctrl.abort(); }, 180000);
+        return fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: ctrl ? ctrl.signal : undefined
+        }).then(function (r) {
+            return r.json().catch(function () {
+                return { ok: false, error: r.status >= 500 ? 'El servidor tuvo un problema. Probá de nuevo.' : 'No se pudo leer la respuesta.' };
+            });
+        }).catch(function (err) {
+            return { ok: false, error: err && err.name === 'AbortError' ? 'La IA tardó demasiado. Probá de nuevo en un rato.' : 'No hay conexión con el servidor.' };
+        }).then(function (r) { clearTimeout(corte); return r; });
+    }
+    function simularIA() {
+        return new Promise(function (ok) {
+            setTimeout(function () {
+                ok({ ok: true, resultado: SRC.resultado, numero: +root.dataset.numero || 1, talle: 'M', calce: 'Oversize Urbano', tela: '' });
+            }, esperaIA);
+        });
+    }
+    function precargar(url) {
+        return new Promise(function (ok) {
+            var img = new Image();
+            img.onload = img.onerror = function () { ok(); };
+            setTimeout(ok, 8000);
+            img.src = url;
+        });
+    }
+    // Cuando la IA responde: si salió bien, se prepara la foto y sale el sobre (pero no antes de
+    // que el holograma termine de armarse); si no, la máquina se apaga.
+    function esperarIA() {
+        var t0 = performance.now(), mia = vuelta;
+        respuesta.then(function (r) {
+            if (mia !== vuelta) return;
+            if (!r || !r.ok) { later(function () { fallar(r || {}); }, 600); return; }
+            datos = r;
+            mostrarDatos(r);
+            precargar(r.resultado).then(function () {
+                if (mia !== vuelta) return;
+                later(terminar, Math.max(0, MIN_HOLO - (performance.now() - t0)));
+            });
+        });
+    }
+    function mostrarDatos(r) {
+        $('.jpx-rv__result').src = r.resultado;
+        $('.jpx-rv__num').textContent = String(r.numero || 1).padStart(4, '0');
+        $('.jpx-rv__talle').hidden = !r.talle;
+        $('.jpx-rv__talle-n').textContent = r.talle || '';
+        $('.jpx-rv__talle-det').textContent = [r.calce, r.tela].filter(Boolean).join(' · ');
+        var wsp = $('.jpx-rv__wsp');
+        wsp.hidden = !r.whatsapp;
+        if (r.whatsapp) wsp.href = r.whatsapp;
+        actions.querySelector('[data-act="carrito"]').textContent = r.talle ? 'Agregar al carrito · Talle ' + r.talle : 'Agregar al carrito';
+    }
+    function fallar(r) {
+        fase = 'error';
+        stopAll();
+        limpiarHolograma();
+        var cv = $('.jpx-rv__sparks');
+        cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+        root.classList.remove('is-processing', 'is-on', 'is-lit', 'is-waking');
+        if (r.error) console.warn('[Sala de revelado]', r.error);
+        // Si la prueba llegó a guardarse (r.numero), el problema fue la IA: mensaje simple.
+        var texto = r.numero || !r.error ? 'La IA está con mucha gente en este momento. Probá de nuevo en un ratito.' : r.error;
+        if (r.talle) texto += ' Igual, tu talle recomendado es el ' + r.talle + '.';
+        $('.jpx-rv__fail-text').textContent = texto;
+        failBox.hidden = false;
+        $('button', failBox).focus();
     }
 
     function empezarProgreso() {
         var t0 = performance.now(), i = 0, glifo = 0;
         var GLIFOS = ['REV', '▮▯▯', '▮▮▯', '▮▮▮'];
         decir(MENSAJES[0]);
+        var avisoFila = false;
         every(function () {
             if (i < MENSAJES.length - 1) decir(MENSAJES[++i]);
+            else if (!avisoFila && performance.now() - t0 > 35000) { avisoFila = true; decir('Hay fila en la IA, un poquito más…'); }
         }, Math.max(1800, esperaIA / MENSAJES.length));
         every(function () { screenR.textContent = GLIFOS[glifo++ % GLIFOS.length]; }, 420);
         (function paso(now) {
@@ -332,6 +489,16 @@
         ['uP', 'uG', 'uPMap', 'uGRect', 'uTexel', 'uT', 'uBuild', 'uMerge', 'uWrap', 'uScan', 'uLaser', 'uCollapse', 'uAlpha']
             .forEach(function (n) { U[n] = gl.getUniformLocation(pr, n); });
 
+        // Para el holograma alcanza con 1024 px: una foto de celu entera ocuparía mucha memoria.
+        function achicada(img) {
+            var m = Math.max(img.naturalWidth, img.naturalHeight);
+            if (m <= 1024) return img;
+            var k = 1024 / m, c = document.createElement('canvas');
+            c.width = Math.round(img.naturalWidth * k);
+            c.height = Math.round(img.naturalHeight * k);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            return c;
+        }
         function textura(unidad, img) {
             var t = gl.createTexture();
             gl.activeTexture(gl.TEXTURE0 + unidad);
@@ -341,11 +508,14 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
             function subir() {
+                if (!img.naturalWidth) return;
                 gl.activeTexture(gl.TEXTURE0 + unidad);
                 gl.bindTexture(gl.TEXTURE_2D, t);
-                try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); } catch (err) { /* queda negra */ }
+                try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, achicada(img)); } catch (err) { /* queda negra */ }
             }
-            if (img.complete && img.naturalWidth) subir(); else img.addEventListener('load', subir);
+            // Cada vez que cambia la foto (la persona elige otra, u otra prenda) se vuelve a subir.
+            img.addEventListener('load', subir);
+            if (img.complete) subir();
         }
         textura(0, imgPersona);
         textura(1, imgPrenda);
@@ -547,10 +717,35 @@
         bar.style.transform = 'scaleX(0)';
         msg.textContent = '';
         goBtn.disabled = false;
+        failBox.hidden = true;
+        vuelta++;
+        datos = null;
+        respuesta = null;
     }
 
     // ------------------------------------------------------------------ eventos
-    goBtn.addEventListener('click', arrancar);
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (fase !== 'inicio') return;
+        if (!demo && !fotoBlob) {
+            if (!(fileInput.files && fileInput.files[0])) {
+                cardFoto.classList.add('is-falta');
+                avisarForm('Subí tu foto para empezar.');
+                return;
+            }
+            // Hay foto elegida pero todavía no se leyó: se lee y se sigue.
+            goBtn.disabled = true;
+            (leyendo || leerFoto()).then(function () { goBtn.disabled = false; form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true })); });
+            return;
+        }
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        avisarForm('');
+        respuesta = demo ? simularIA() : pedirIA();
+        arrancar();
+    });
+    failBox.addEventListener('click', function (e) {
+        if (e.target.closest('[data-act="reintentar"]')) { reiniciar(); goBtn.focus(); }
+    });
     env.addEventListener('click', abrir);
     actions.addEventListener('click', function (e) {
         var b = e.target.closest('[data-act]');
@@ -559,10 +754,15 @@
             var on = photo.classList.toggle('is-compare');
             animarX(on ? 0 : 50, on ? 50 : 0);
         } else if (b.dataset.act === 'carrito') {
-            aviso('En la página real: se agrega al carrito con el talle sugerido');
+            var p = datos && datos.producto;
+            if (p && window.jpexCart) {
+                window.jpexCart.addItem({ id: String(p.id), name: p.name, price: p.price, size: datos.talle || 'Único', color: '', image: p.image, qty: 1 });
+            } else {
+                aviso(demo ? 'En la demo no se agrega al carrito' : 'No se pudo agregar al carrito');
+            }
         } else if (b.dataset.act === 'otra') {
             reiniciar();
-            aviso('En la página real: misma foto, elegís otra prenda');
+            aviso('Elegí otra prenda y tocá Revelar');
         }
     });
     // Los controles de prueba se ven solo con ?dev=1 (o en las demos).
@@ -578,7 +778,6 @@
         }
     });
     // Para revisar etapas sin tocar nada: ?demo=trabajando | sobre | final
-    var demo = qs.get('demo');
     if (demo) {
         if (qs.get('ia')) esperaIA = +qs.get('ia');
         if (qs.get('debug') === '1') root.classList.add('is-debug');
@@ -593,7 +792,7 @@
                     ' | acciones op ' + getComputedStyle(actions).opacity + ' | reveal ' + reveal.className;
             }, 100);
         }
-        setTimeout(arrancar, 300);
+        setTimeout(function () { respuesta = simularIA(); arrancar(); }, 300);
         if (demo === 'final') {
             var esperar = setInterval(function () { if (fase === 'sobre') { clearInterval(esperar); abrir(); } }, 200);
         }

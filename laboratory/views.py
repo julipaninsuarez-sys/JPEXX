@@ -1,6 +1,7 @@
 from urllib.parse import quote
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from products.models import Product
 from .models import TryOnSession
 from .utils import (
@@ -36,7 +37,7 @@ def live_search_api(request):
             'name': prod.name,
             'price': str(getattr(prod, 'price', '')),
             'image_url': img_url or '',
-            'lab_url': f"/lab/{prod.id}/",
+            'lab_url': f"/lab/revelado/{prod.id}/",
         })
 
     return JsonResponse({'results': results})
@@ -165,7 +166,7 @@ def lab_sketches(request):
 
 def _ultima_prueba_local():
     """Busca la última prueba de IA guardada en esta compu (foto, prenda y resultado de la
-    misma sesión) para usarla de ejemplo en la sala de revelado."""
+    misma sesión) para la demo de la sala de revelado (?demo=...)."""
     from django.conf import settings
     media = settings.MEDIA_ROOT
     results = media / 'laboratory' / 'results'
@@ -190,9 +191,131 @@ def _ultima_prueba_local():
     return {}
 
 
-def lab_revelado(request):
-    """Sala de revelado (a donde lleva "Lab" en el menú). La foto de la persona y la prenda entran
-    a la máquina, la IA trabaja y sale un sobre con la foto revelada. Por ahora no llama a la IA:
-    simula la espera y muestra una prueba ya guardada. Conectarla al formulario y a la IA queda
-    para después."""
-    return render(request, 'laboratory/lab_revelado.html', {'ejemplo': _ultima_prueba_local()})
+def _prendas_para_probar():
+    """Las mismas consultas que usa lab_view para traer las prendas con sus talles."""
+    return (
+        Product.objects
+        .select_related('category', 'size_template')
+        .prefetch_related(
+            'size_template__items__size',
+            'detailed_measurements__size',
+            'measurements',
+        )
+    )
+
+
+def lab_revelado(request, product_id=None):
+    """Sala de revelado (a donde lleva "Lab" en el menú). Abajo a la izquierda está el formulario
+    del probador (prenda, altura, peso, calce, talle y foto). Al enviarlo, las fotos entran a la
+    máquina y la página espera a la IA (lab_revelado_probar) mientras anima; cuando responde, sale
+    el sobre con la foto revelada. ?demo=... simula la IA con una prueba ya guardada."""
+    prendas = []
+    for prod in _prendas_para_probar():
+        _, img_url = get_product_image_info(prod)
+        if not img_url:
+            continue    # sin foto de la prenda la IA no puede probarla
+        prendas.append({
+            'id': prod.id,
+            'name': prod.name,
+            'price': prod.price,
+            'img': img_url,
+            'talles': ','.join(t['size_name'] for t in get_product_sizes_data(prod)),
+        })
+
+    elegida = product_id
+    if elegida and not any(p['id'] == elegida for p in prendas):
+        get_object_or_404(Product, id=elegida)      # 404 si no existe; si existe pero no tiene foto, se elige otra
+        elegida = None
+    if not elegida and prendas:
+        elegida = prendas[0]['id']
+
+    return render(request, 'laboratory/lab_revelado.html', {
+        'prendas': prendas,
+        'elegida': elegida,
+        'talle_pedido': request.GET.get('size', 'auto'),
+        'ejemplo': _ultima_prueba_local() if request.GET.get('demo') else {},
+    })
+
+
+@require_POST
+def lab_revelado_probar(request):
+    """Recibe el formulario de la sala de revelado y hace la prueba: es lo mismo que el POST de
+    lab_view (calcula el talle, guarda la TryOnSession y llama a generate_tryon_image), pero
+    responde en JSON para que la página siga animando mientras la IA trabaja."""
+    product = get_object_or_404(_prendas_para_probar(), id=request.POST.get('product_id'))
+    user_image = request.FILES.get('user_image')
+    if not user_image:
+        return JsonResponse({'ok': False, 'error': 'Falta tu foto.'}, status=400)
+    if not (user_image.content_type or '').startswith('image/') or user_image.size > 15 * 1024 * 1024:
+        return JsonResponse({'ok': False, 'error': 'La foto tiene que ser una imagen de menos de 15 MB.'}, status=400)
+    try:
+        height_cm = int(request.POST.get('height_cm', 175))
+        weight_kg = int(request.POST.get('weight_kg', 75))
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Revisá tu altura y tu peso.'}, status=400)
+    if not (140 <= height_cm <= 220 and 40 <= weight_kg <= 180):
+        return JsonResponse({'ok': False, 'error': 'Revisá tu altura (140 a 220 cm) y tu peso (40 a 180 kg).'}, status=400)
+    preferred_fit = request.POST.get('preferred_fit', 'oversize')
+    if preferred_fit not in dict(TryOnSession.PREFERRED_FIT_CHOICES):
+        preferred_fit = 'oversize'
+    requested_size = request.POST.get('requested_size', 'auto')
+
+    rec_size, explanation, prompt, diagnostics = calculate_size_and_prompt(
+        product=product,
+        height_cm=height_cm,
+        weight_kg=weight_kg,
+        preferred_fit=preferred_fit,
+        requested_size=requested_size
+    )
+    session = TryOnSession.objects.create(
+        product=product,
+        user_image=user_image,
+        height_cm=height_cm,
+        weight_kg=weight_kg,
+        preferred_fit=preferred_fit,
+        recommended_size=rec_size,
+        fit_explanation=explanation,
+        ai_prompt=prompt
+    )
+
+    garment_path, garment_url = get_product_image_info(product)
+    resultado, error = None, None
+    if garment_path:
+        relative_result_path, error = generate_tryon_image(
+            session_id=session.id,
+            user_img_path=session.user_image.path,
+            garment_img_path=garment_path,
+            ai_prompt=prompt
+        )
+        if relative_result_path:
+            session.result_image = relative_result_path
+            session.save()
+            resultado = session.result_image.url
+    else:
+        error = "Esta prenda todavía no tiene una imagen cargada en la base de datos."
+
+    mensaje_wsp = (
+        f"¡Hola JPEX! Probé la prenda *{product.name}* en JPEX LAB. "
+        f"Mido {height_cm} cm, peso {weight_kg} kg y probé el *Talle {rec_size}* "
+        f"(Tipo :  {preferred_fit}). RESPONDAN RAPIDO! Gracias."
+    )
+    diagnostics = diagnostics or {}
+    return JsonResponse({
+        'ok': bool(resultado),
+        'numero': session.id,
+        'resultado': resultado,
+        'foto': session.user_image.url,
+        'prenda': garment_url,
+        'talle': rec_size,
+        'explicacion': explanation,
+        'calce': diagnostics.get('calce_badge', ''),
+        'tela': diagnostics.get('fabric_es', ''),
+        'whatsapp': f"https://wa.me/5492213146934?text={quote(mensaje_wsp)}",
+        'producto': {
+            'id': product.id,
+            'name': product.name,
+            'price': f'{product.price:.0f}',
+            'image': garment_url or '',
+        },
+        'error': error,
+    })

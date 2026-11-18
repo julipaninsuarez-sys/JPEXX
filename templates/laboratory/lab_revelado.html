@@ -4,7 +4,7 @@
 {% block title %}JPEX Store — Sala de revelado{% endblock %}
 
 {% block extra_head %}
-<link href="{% static 'css/lab-revelado.css' %}?v=3" rel="stylesheet">
+<link href="{% static 'css/lab-revelado.css' %}?v=4" rel="stylesheet">
 {% endblock %}
 
 {% block body_class %}jpx-lab-page jpx-rv-page{% endblock %}
@@ -53,22 +53,83 @@
     </div>
     <div class="jpx-rv__dim" aria-hidden="true"></div>
 
-    {# 1) Arranque: la foto de la persona y la prenda elegida. #}
-    <div class="jpx-rv__start">
+    {# 1) El probador (el formulario del Lab): prenda, medidas y foto. Al enviarlo, las dos fotos #}
+    {#    entran a la máquina y se espera a la IA (lab_revelado_probar) mientras anima.          #}
+    <form class="jpx-rv__start" id="rvForm" method="post" enctype="multipart/form-data"
+          action="{% url 'lab_revelado_probar' %}" novalidate>
+        {% csrf_token %}
         <p class="jpx-rv__kicker">Sala de revelado</p>
-        <h1 class="jpx-rv__title">Tu foto + la prenda</h1>
+        <h1 class="jpx-rv__title">Probate una prenda</h1>
         <div class="jpx-rv__cards">
-            <figure class="jpx-rv__card" data-card="foto"><img alt="Tu foto"><figcaption>Tu foto</figcaption></figure>
+            <label class="jpx-rv__card" data-card="foto">
+                <input class="jpx-rv__file" type="file" name="user_image" accept="image/*" required>
+                <span class="jpx-rv__card-img">
+                    <img alt="Tu foto" draggable="false">
+                    <span class="jpx-rv__card-hint"><b>+</b>Subí tu foto</span>
+                </span>
+                <span class="jpx-rv__card-cap">Tu foto</span>
+            </label>
             <span class="jpx-rv__plus" aria-hidden="true">+</span>
-            <figure class="jpx-rv__card" data-card="prenda"><img alt="La prenda"><figcaption>La prenda</figcaption></figure>
+            <div class="jpx-rv__card" data-card="prenda">
+                <span class="jpx-rv__card-img"><img alt="La prenda" draggable="false" src="{% for p in prendas %}{% if p.id == elegida %}{{ p.img }}{% endif %}{% endfor %}"></span>
+                <span class="jpx-rv__card-cap">La prenda</span>
+            </div>
         </div>
-        <button class="jpx-rv__go" type="button">Revelar</button>
-    </div>
+
+        <label class="jpx-rv__field">
+            <span>Prenda</span>
+            <select name="product_id" id="rvPrenda" required>
+                {% for p in prendas %}
+                <option value="{{ p.id }}" data-img="{{ p.img }}" data-talles="{{ p.talles }}"
+                        {% if p.id == elegida %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="jpx-rv__row">
+            <label class="jpx-rv__field">
+                <span>Altura (cm)</span>
+                <input type="number" name="height_cm" min="140" max="220" value="175" inputmode="numeric" required>
+            </label>
+            <label class="jpx-rv__field">
+                <span>Peso (kg)</span>
+                <input type="number" name="weight_kg" min="40" max="180" value="75" inputmode="numeric" required>
+            </label>
+        </div>
+        <details class="jpx-rv__more">
+            <summary>Calce y talle</summary>
+            <div class="jpx-rv__row">
+                <label class="jpx-rv__field">
+                    <span>Cómo te gusta</span>
+                    <select name="preferred_fit">
+                        <option value="oversize">Suelto / Oversize</option>
+                        <option value="regular">Clásico / Regular</option>
+                        <option value="ajustado">Al cuerpo / Ajustado</option>
+                    </select>
+                </label>
+                <label class="jpx-rv__field">
+                    <span>Talle</span>
+                    <select name="requested_size" id="rvTalle" data-pedido="{{ talle_pedido }}">
+                        <option value="auto">Automático</option>
+                    </select>
+                </label>
+            </div>
+        </details>
+        <p class="jpx-rv__tip">Foto de frente, de la cintura para arriba, con buena luz.</p>
+        <p class="jpx-rv__form-error" role="alert" hidden></p>
+        <button class="jpx-rv__go" type="submit">Revelar</button>
+    </form>
 
     {# 2) Mientras la IA trabaja. #}
     <div class="jpx-rv__status" aria-live="polite">
         <p class="jpx-rv__msg"></p>
         <div class="jpx-rv__bar"><i></i></div>
+    </div>
+
+    {# Si la IA no pudo: la máquina se apaga y se puede volver a intentar. #}
+    <div class="jpx-rv__fail" role="alert" hidden>
+        <p class="jpx-rv__fail-title">No se pudo revelar</p>
+        <p class="jpx-rv__fail-text"></p>
+        <button type="button" class="jpx-rv__go" data-act="reintentar">Volver a intentar</button>
     </div>
 
     {# 3) El sobre y la foto revelada. #}
@@ -94,9 +155,11 @@
         {# Cuando la foto sale del sobre se muda acá, al centro, con los botones abajo. #}
         <div class="jpx-rv__final">
             <div class="jpx-rv__actions">
+                <p class="jpx-rv__talle"><span>Talle recomendado</span> <b class="jpx-rv__talle-n"></b> <i class="jpx-rv__talle-det"></i></p>
                 <button type="button" class="jpx-rv__btn" data-act="antes">Antes / después</button>
                 <button type="button" class="jpx-rv__btn jpx-rv__btn--main" data-act="carrito">Agregar al carrito</button>
                 <button type="button" class="jpx-rv__btn" data-act="otra">Probar otra prenda</button>
+                <a class="jpx-rv__wsp" href="#" target="_blank" rel="noopener" hidden>Pedir esta prenda por WhatsApp</a>
             </div>
         </div>
     </div>
@@ -111,7 +174,7 @@
     </aside>
 </section>
 
-<script src="{% static 'js/lab-revelado.js' %}?v=3" defer></script>
+<script src="{% static 'js/lab-revelado.js' %}?v=4" defer></script>
 {% endblock %}
 
 {% block footer %}{% endblock %}

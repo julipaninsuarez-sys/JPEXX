@@ -383,23 +383,25 @@
 }
 .jpx-rv.is-reveal .jpx-rv__dim { opacity: 1; }
 
-/* ---- Arranque */
+/* ---- El probador (formulario): abajo a la izquierda en compu, panel de abajo en celu */
 .jpx-rv__start {
     position: absolute;
-    left: 50%;
-    bottom: max(16px, env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    width: min(440px, calc(100% - 32px));
+    left: 24px;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    z-index: 5;
+    width: 330px;
+    max-height: calc(100% - 48px);
+    overflow-y: auto;
     padding: 14px 16px 16px;
     border: 1px solid rgba(255, 90, 70, .35);
     border-radius: 14px;
-    background: rgba(14, 6, 7, .72);
+    background: rgba(14, 6, 7, .78);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
-    text-align: center;
+    color-scheme: dark;
     transition: opacity .4s, transform .5s;
 }
-.jpx-rv.is-feeding .jpx-rv__start { opacity: 0; transform: translate(-50%, 20px); pointer-events: none; }
+.jpx-rv.is-feeding .jpx-rv__start { opacity: 0; transform: translateY(20px); pointer-events: none; }
 .jpx-rv__kicker {
     margin: 0;
     font-size: .72rem;
@@ -408,20 +410,79 @@
     color: #ff8a78;
 }
 .jpx-rv__title { margin: 2px 0 10px; font-size: 1.15rem; font-weight: 700; color: #fff; }
-.jpx-rv__cards { display: flex; align-items: center; justify-content: center; gap: 12px; }
-.jpx-rv__card { margin: 0; width: 96px; }
-.jpx-rv__card img {
+.jpx-rv__cards { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px; }
+.jpx-rv__card { position: relative; margin: 0; width: 92px; text-align: center; }
+.jpx-rv__card-img {
+    position: relative;
     display: block;
-    width: 100%;
     aspect-ratio: 3 / 4;
-    object-fit: cover;
+    overflow: hidden;
     border-radius: 6px;
     background: #1b1012;
     box-shadow: 0 0 0 1px rgba(255, 90, 70, .4), 0 6px 16px rgba(0, 0, 0, .5);
 }
-.jpx-rv__card[data-card="prenda"] img { object-fit: contain; background: #fff; }
-.jpx-rv__card figcaption { margin-top: 5px; font-size: .75rem; color: #e9cfc8; }
+.jpx-rv__card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.jpx-rv__card[data-card="prenda"] .jpx-rv__card-img { background: #fff; }
+.jpx-rv__card[data-card="prenda"] img { object-fit: contain; }
+.jpx-rv__card-cap { display: block; margin-top: 5px; font-size: .75rem; color: #e9cfc8; }
 .jpx-rv__plus { font-size: 1.4rem; color: #ff6a55; font-weight: 700; }
+/* La tarjeta "Tu foto" es el botón para subirla: el input queda invisible encima. */
+.jpx-rv__file { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.jpx-rv__card[data-card="foto"] img { opacity: 0; }
+.jpx-rv__card[data-card="foto"].has-foto img { opacity: 1; }
+.jpx-rv__card-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 1px dashed rgba(255, 120, 100, .55);
+    border-radius: 6px;
+    font-size: .72rem;
+    color: #ffcabf;
+}
+.jpx-rv__card-hint b { font-size: 1.6rem; line-height: 1; color: #ff5a44; }
+.jpx-rv__card[data-card="foto"].has-foto .jpx-rv__card-hint { display: none; }
+.jpx-rv__card[data-card="foto"]:hover .jpx-rv__card-img,
+.jpx-rv__file:focus-visible + .jpx-rv__card-img { box-shadow: 0 0 0 2px #ff5a44, 0 0 18px rgba(255, 42, 20, .5); }
+.jpx-rv__card.is-falta .jpx-rv__card-img { box-shadow: 0 0 0 2px #ffb300, 0 0 14px rgba(255, 179, 0, .4); }
+
+.jpx-rv__row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jpx-rv__field { display: block; margin: 0 0 8px; text-align: left; }
+.jpx-rv__field > span {
+    display: block;
+    margin-bottom: 3px;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #e9cfc8;
+}
+.jpx-rv__field select,
+.jpx-rv__field input {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 120, 100, .35);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .45);
+    color: #fff;
+    font-size: 16px;    /* 16 px: el iPhone no hace zoom al tocar el campo */
+}
+.jpx-rv__field select:focus,
+.jpx-rv__field input:focus { outline: 2px solid #ff5a44; outline-offset: 1px; }
+.jpx-rv__field input:user-invalid { border-color: #ffb300; }
+.jpx-rv__more { margin: 0 0 4px; text-align: left; }
+.jpx-rv__more summary {
+    margin-bottom: 8px;
+    font-size: .78rem;
+    color: #ff9f8f;
+    cursor: pointer;
+}
+.jpx-rv__tip { margin: 2px 0 0; font-size: .74rem; color: #bfa59f; text-align: left; }
+.jpx-rv__form-error { margin: 8px 0 0; font-size: .8rem; color: #ffcf66; text-align: left; }
 .jpx-rv__go {
     margin-top: 12px;
     width: 100%;
@@ -437,6 +498,39 @@
     cursor: pointer;
 }
 .jpx-rv__go:active { transform: translateY(1px); }
+.jpx-rv__go:disabled { opacity: .6; cursor: default; }
+
+/* Celu: el probador es un panel abajo, a lo ancho, y deja ver la máquina arriba. */
+@media (max-width: 640px) {
+    .jpx-rv__start {
+        left: 10px;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: auto;
+        max-height: 62%;
+        padding: 12px 14px 14px;
+    }
+    .jpx-rv__title { margin-bottom: 8px; font-size: 1.05rem; }
+    .jpx-rv__card { width: 74px; }
+}
+
+/* Si la IA no pudo */
+.jpx-rv__fail {
+    position: absolute;
+    left: 50%;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    z-index: 6;
+    transform: translateX(-50%);
+    width: min(360px, calc(100% - 32px));
+    padding: 14px 16px 16px;
+    border: 1px solid rgba(255, 179, 0, .45);
+    border-radius: 14px;
+    background: rgba(14, 6, 7, .85);
+    text-align: center;
+}
+.jpx-rv__fail[hidden] { display: none; }
+.jpx-rv__fail-title { margin: 0 0 4px; font-weight: 700; color: #fff; }
+.jpx-rv__fail-text { margin: 0; font-size: .85rem; color: #e9cfc8; }
 
 /* Copia de la foto que vuela a la ranura */
 .jpx-rv-fly {
@@ -680,6 +774,12 @@
     cursor: pointer;
 }
 .jpx-rv__btn--main { background: linear-gradient(180deg, #ff3b22, #b3120a); border-color: transparent; font-weight: 700; }
+/* Talle recomendado y WhatsApp, junto a los botones finales */
+.jpx-rv__talle { flex-basis: 100%; margin: 0 0 2px; text-align: center; font-size: .85rem; color: #e9cfc8; }
+.jpx-rv__talle b { margin: 0 4px; padding: 1px 8px; border-radius: 6px; background: #fff; color: #b3120a; font-size: 1rem; }
+.jpx-rv__talle i { font-style: normal; color: #bfa59f; }
+.jpx-rv__talle[hidden], .jpx-rv__wsp[hidden] { display: none; }
+.jpx-rv__wsp { flex-basis: 100%; text-align: center; font-size: .82rem; color: #8fe3a8; }
 .jpx-rv__toast {
     position: absolute;
     left: 50%;
