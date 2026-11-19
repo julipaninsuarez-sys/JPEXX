@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.pyc.*
 .venv/
+
+# Fotos de las pruebas del Lab (personales): nunca van al repo.
+media/laboratory/
