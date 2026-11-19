@@ -483,6 +483,40 @@
 }
 .jpx-rv__tip { margin: 2px 0 0; font-size: .74rem; color: #bfa59f; text-align: left; }
 .jpx-rv__form-error { margin: 8px 0 0; font-size: .8rem; color: #ffcf66; text-align: left; }
+.jpx-rv__form-error:empty { margin: 0; }
+/* Privacidad: chiquito y tranquilo, pero legible (#c9b3ad sobre el panel: 8,9:1). */
+.jpx-rv__privacidad {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    margin: 6px 0 0;
+    font-size: .72rem;
+    line-height: 1.35;
+    color: #c9b3ad;
+    text-align: left;
+}
+.jpx-rv__privacidad svg { flex: none; margin-top: 1px; color: #ff8a78; }
+.jpx-rv__privacidad-corta {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    margin: -2px 0 10px;
+    font-size: .72rem;
+    color: #c9b3ad;
+}
+.jpx-rv__privacidad-corta svg { flex: none; color: #ff8a78; }
+/* Límite de pruebas: pasada la mitad, una línea tranquila; con pocas, amarillo; sin pruebas,
+   recuadro y el botón apagado. */
+.jpx-rv__cupo { margin: 8px 0 0; font-size: .78rem; color: #c9b3ad; text-align: left; }
+.jpx-rv__cupo.is-pocas, .jpx-rv__cupo.is-agotado { color: #ffcf66; }
+.jpx-rv__cupo:empty { margin: 0; }
+.jpx-rv__cupo.is-agotado {
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 207, 102, .4);
+    border-radius: 8px;
+    background: rgba(255, 207, 102, .08);
+}
 .jpx-rv__go {
     margin-top: 12px;
     width: 100%;
@@ -512,6 +546,16 @@
     }
     .jpx-rv__title { margin-bottom: 8px; font-size: 1.05rem; }
     .jpx-rv__card { width: 74px; }
+    .jpx-rv__start { padding-bottom: 0; }
+    /* "Revelar" queda siempre a la vista, pegado abajo del panel: si el formulario no entra,
+       se desliza lo de arriba y el botón no se esconde. */
+    .jpx-rv__start .jpx-rv__go {
+        position: sticky;
+        bottom: 0;
+        margin-top: 10px;
+        box-shadow: 0 -10px 14px 6px rgba(14, 6, 7, .95), 0 0 18px rgba(255, 42, 20, .45);
+    }
+    .jpx-rv__start::after { content: ""; display: block; height: 14px; }
 }
 
 /* Si la IA no pudo */

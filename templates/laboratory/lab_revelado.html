@@ -4,7 +4,7 @@
 {% block title %}JPEX Store — Sala de revelado{% endblock %}
 
 {% block extra_head %}
-<link href="{% static 'css/lab-revelado.css' %}?v=4" rel="stylesheet">
+<link href="{% static 'css/lab-revelado.css' %}?v=8" rel="stylesheet">
 {% endblock %}
 
 {% block body_class %}jpx-lab-page jpx-rv-page{% endblock %}
@@ -62,7 +62,7 @@
         <h1 class="jpx-rv__title">Probate una prenda</h1>
         <div class="jpx-rv__cards">
             <label class="jpx-rv__card" data-card="foto">
-                <input class="jpx-rv__file" type="file" name="user_image" accept="image/*" required>
+                <input class="jpx-rv__file" type="file" name="user_image" accept="image/*" required aria-describedby="rvTip rvPrivacidad">
                 <span class="jpx-rv__card-img">
                     <img alt="Tu foto" draggable="false">
                     <span class="jpx-rv__card-hint"><b>+</b>Subí tu foto</span>
@@ -75,6 +75,9 @@
                 <span class="jpx-rv__card-cap">La prenda</span>
             </div>
         </div>
+        {# Versión corta del aviso de privacidad, a la vista siempre (también en el celu sin deslizar). #}
+        {# aria-hidden: el lector de pantalla ya lee el aviso completo al llegar a "Tu foto".          #}
+        <p class="jpx-rv__privacidad-corta" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1.5 1.5 0 0 1 13.5 8.5v5A1.5 1.5 0 0 1 12 15H4a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 4 7h.5Zm1.5 0h4V5a2 2 0 1 0-4 0v2Z"/></svg> Tu foto se borra a los {{ dias_fotos }} días</p>
 
         <label class="jpx-rv__field">
             <span>Prenda</span>
@@ -114,9 +117,17 @@
                 </label>
             </div>
         </details>
-        <p class="jpx-rv__tip">Foto de frente, de la cintura para arriba, con buena luz.</p>
-        <p class="jpx-rv__form-error" role="alert" hidden></p>
-        <button class="jpx-rv__go" type="submit">Revelar</button>
+        <p class="jpx-rv__tip" id="rvTip">Foto de frente, de la cintura para arriba, con buena luz.</p>
+        {# Privacidad: la foto se borra sola a los N días (laboratory/cuidados.py). #}
+        <p class="jpx-rv__privacidad" id="rvPrivacidad">
+            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2h.5A1.5 1.5 0 0 1 13.5 8.5v5A1.5 1.5 0 0 1 12 15H4a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 4 7h.5Zm1.5 0h4V5a2 2 0 1 0-4 0v2Z"/></svg>
+            Usamos tu foto solo para esta prueba: la procesa una IA y la borramos a los {{ dias_fotos }} días.
+        </p>
+        {# Errores del formulario. Siempre está en la página; se cambia el texto para que se anuncie. #}
+        <p class="jpx-rv__form-error" role="alert"></p>
+        {# Límite de pruebas por hora: aparece cuando quedan pocas o ninguna. #}
+        <p class="jpx-rv__cupo{% if cupo.nivel %} is-{{ cupo.nivel }}{% endif %}" id="rvCupo" aria-live="polite">{{ cupo.texto }}</p>
+        <button class="jpx-rv__go" type="submit"{% if not cupo.quedan %} disabled aria-describedby="rvCupo"{% endif %}>Revelar</button>
     </form>
 
     {# 2) Mientras la IA trabaja. #}
@@ -174,7 +185,7 @@
     </aside>
 </section>
 
-<script src="{% static 'js/lab-revelado.js' %}?v=4" defer></script>
+<script src="{% static 'js/lab-revelado.js' %}?v=6" defer></script>
 {% endblock %}
 
 {% block footer %}{% endblock %}

@@ -97,7 +97,20 @@
         });
     }
     var fotoBlob = null, fotoURL = '';
-    function avisarForm(texto) { formError.textContent = texto; formError.hidden = !texto; }
+    // El mensaje queda siempre en la página y se cambia el texto: así el lector de pantalla lo lee.
+    function avisarForm(texto) { formError.textContent = texto; }
+
+    // Límite de pruebas por hora. El servidor manda el texto y el tono (laboratory/cuidados.py):
+    // nada al principio, una línea tranquila pasada la mitad, amarillo con pocas y, sin pruebas,
+    // "Revelar" apagado.
+    var cupoBox = $('#rvCupo');
+    function ponerCupo(c) {
+        if (!c || typeof c.quedan !== 'number') return;
+        cupoBox.textContent = c.texto || '';
+        ['aviso', 'pocas', 'agotado'].forEach(function (n) { cupoBox.classList.toggle('is-' + n, c.nivel === n); });
+        goBtn.disabled = c.quedan <= 0;
+        if (c.quedan <= 0) goBtn.setAttribute('aria-describedby', 'rvCupo'); else goBtn.removeAttribute('aria-describedby');
+    }
 
     if (demo) {
         ponerFoto(SRC.foto);
@@ -247,6 +260,7 @@
         var t0 = performance.now(), mia = vuelta;
         respuesta.then(function (r) {
             if (mia !== vuelta) return;
+            if (r) ponerCupo(r.cupo);
             if (!r || !r.ok) { later(function () { fallar(r || {}); }, 600); return; }
             datos = r;
             mostrarDatos(r);
@@ -279,6 +293,9 @@
         var texto = r.numero || !r.error ? 'La IA está con mucha gente en este momento. Probá de nuevo en un ratito.' : r.error;
         if (r.talle) texto += ' Igual, tu talle recomendado es el ' + r.talle + '.';
         $('.jpx-rv__fail-text').textContent = texto;
+        // Si fue por el límite de pruebas, no tiene sentido "volver a intentar" ya.
+        $('.jpx-rv__fail-title').textContent = r.limite ? 'Llegaste al límite' : 'No se pudo revelar';
+        $('[data-act="reintentar"]', failBox).textContent = r.limite ? 'Volver' : 'Volver a intentar';
         failBox.hidden = false;
         $('button', failBox).focus();
     }
@@ -716,7 +733,7 @@
         screenL.textContent = screenR.textContent = '';
         bar.style.transform = 'scaleX(0)';
         msg.textContent = '';
-        goBtn.disabled = false;
+        goBtn.disabled = cupoBox.classList.contains('is-agotado');
         failBox.hidden = true;
         vuelta++;
         datos = null;
@@ -731,6 +748,7 @@
             if (!(fileInput.files && fileInput.files[0])) {
                 cardFoto.classList.add('is-falta');
                 avisarForm('Subí tu foto para empezar.');
+                fileInput.focus();
                 return;
             }
             // Hay foto elegida pero todavía no se leyó: se lee y se sigue.

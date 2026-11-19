@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from products.models import Product
 from .models import TryOnSession
+from . import cuidados
+from django.conf import settings
 from .utils import (
     calculate_size_and_prompt,
     get_product_image_info,
@@ -230,11 +232,19 @@ def lab_revelado(request, product_id=None):
     if not elegida and prendas:
         elegida = prendas[0]['id']
 
+    cupo = cuidados.cupo(request)
+    # Solo en la compu (DEBUG): ?ver=mitad, ?ver=pocas o ?ver=limite muestran cómo se ve el aviso.
+    vista_previa = {'mitad': (5, 0), 'pocas': (2, 0), 'limite': (0, 23)}.get(request.GET.get('ver'))
+    if settings.DEBUG and vista_previa:
+        cupo = cuidados.con_texto({**cupo, 'quedan': vista_previa[0], 'espera_min': vista_previa[1]})
+
     return render(request, 'laboratory/lab_revelado.html', {
         'prendas': prendas,
         'elegida': elegida,
         'talle_pedido': request.GET.get('size', 'auto'),
         'ejemplo': _ultima_prueba_local() if request.GET.get('demo') else {},
+        'cupo': cupo,
+        'dias_fotos': cuidados.dias_fotos(),
     })
 
 
@@ -260,6 +270,14 @@ def lab_revelado_probar(request):
     if preferred_fit not in dict(TryOnSession.PREFERRED_FIT_CHOICES):
         preferred_fit = 'oversize'
     requested_size = request.POST.get('requested_size', 'auto')
+
+    # Límite de pruebas por hora (ver laboratory/cuidados.py). Cuenta antes de llamar a la IA,
+    # así también cuentan las que fallan.
+    cupo = cuidados.cupo(request)
+    if not cupo['quedan']:
+        return JsonResponse({'ok': False, 'limite': True, 'cupo': cupo, 'error': cupo['texto']}, status=429)
+    cuidados.anotar_prueba(request)
+    cuidados.limpiar_si_toca()
 
     rec_size, explanation, prompt, diagnostics = calculate_size_and_prompt(
         product=product,
@@ -319,4 +337,5 @@ def lab_revelado_probar(request):
             'image': garment_url or '',
         },
         'error': error,
+        'cupo': cuidados.cupo(request),     # cómo queda el límite después de esta prueba
     })
